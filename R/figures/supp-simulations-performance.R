@@ -507,11 +507,11 @@ for (simulation in simulations) {
 	
 	# combine
 	row1 = p1 + p2 + p3 + p4 + plot_layout(nrow = 1)
-	ggsave(paste0("fig//EFig2/", simulation, "-row1.pdf"), row1,
+	ggsave(paste0("fig/EFig2/", simulation, "-row1.pdf"), row1,
 				 width = 12, height = 5, units = "cm", useDingbats = FALSE)
-	ggsave(paste0("fig//EFig2/", simulation, "-row2.pdf"), p5,
+	ggsave(paste0("fig/EFig2/", simulation, "-row2.pdf"), p5,
 				 width = 8, height = 6.3, units = "cm", useDingbats = FALSE)
-	ggsave(paste0("fig//EFig2/", simulation, "-row3.pdf"), p6,
+	ggsave(paste0("fig/EFig2/", simulation, "-row3.pdf"), p6,
 				 width = 9, height = 6.6, units = "cm", useDingbats = FALSE)
 }
 

@@ -108,7 +108,7 @@ p2 = meta %>%
 # p2
 p0 = wrap_plots(p1, p2, nrow=1)
 # p0
-ggsave('fig//EFig8/registration.pdf', p0, width=9, height = 6, units='cm')
+ggsave('fig/EFig8/registration.pdf', p0, width=9, height = 6, units='cm')
 
 # Supp Fig 4b - genes
 
@@ -165,7 +165,7 @@ fig7b = dat0 %>%
           legend.key.height = unit(0.18, 'lines'),
           plot.title = element_text(size = 5))
 fig7b
-ggsave('fig//EFig8/AUC.pdf', fig7b, width=6, height=6, units='cm')
+ggsave('fig/EFig8/AUC.pdf', fig7b, width=6, height=6, units='cm')
 
 meta = sc@meta.data %>%
     mutate(
@@ -255,7 +255,7 @@ for (i in 1:length(genes_to_plot)) {
     expr_plots[[length(expr_plots)+1]] = expr_plot
 }
 fig7c = wrap_plots(expr_plots, nrow=4)
-ggsave('fig//EFig8/genes.pdf', fig7c, width=10, height=11, units='cm')
+ggsave('fig/EFig8/genes.pdf', fig7c, width=10, height=11, units='cm')
 
 source('R/theme.R')
 dat0 = ves_res$de_feature_result
@@ -299,7 +299,7 @@ p3 = dat0 %>%
         legend.title = element_text(size = 5),
     )
 p3
-ggsave('fig//EFig8/lollipop-genes.pdf', p3, width = 8, height = 8, 
+ggsave('fig/EFig8/lollipop-genes.pdf', p3, width = 8, height = 8, 
        units = 'cm', useDingbats = FALSE)
 
 meta = sc@meta.data %>%
@@ -373,5 +373,5 @@ p1 = delta %>%
           legend.key.width = unit(0.25, 'lines'),
           legend.position = 'bottom',
           legend.justification = 'right')
-ggsave(paste0('fig//EFig8/celltype-auc-delta-wilcox.pdf'), p1, width=6, height=6, units='cm')
+ggsave(paste0('fig/EFig8/celltype-auc-delta-wilcox.pdf'), p1, width=6, height=6, units='cm')
 
