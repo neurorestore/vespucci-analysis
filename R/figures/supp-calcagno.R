@@ -124,7 +124,7 @@ p2 = meta %>%
     facet_wrap(~replicate, ncol = 6, scales='free')
 p0 = wrap_plots(p1,p2, nrow=2)
 # p0
-ggsave('fig/final/EFig4/rctd-registration.pdf', p0, width = 11, height = 4, units='cm')
+ggsave('fig/EFig4/rctd-registration.pdf', p0, width = 11, height = 4, units='cm')
 
 ###############################################################################-
 ## b. genes ####
@@ -225,7 +225,7 @@ for (idx in seq_along(genes_to_plot)) {
   expr_plots[[idx]] = p
 }
 p1 = wrap_plots(expr_plots, ncol = 5)
-ggsave('fig/final/EFig4/genes.pdf', p1, width = 10, height = 4.5,
+ggsave('fig/EFig4/genes.pdf', p1, width = 10, height = 4.5,
        units = 'cm', useDingbats = FALSE)
 
 ###############################################################################-
@@ -316,7 +316,7 @@ for (idx in seq_len(nrow(mat))) {
   go_plots[[length(go_plots)+1]] = p
 }
 p2 = wrap_plots(go_plots, nrow = 2)
-ggsave('fig/final/EFig4/genes-GO-modules.pdf', p2, width = 16, height = 5,
+ggsave('fig/EFig4/genes-GO-modules.pdf', p2, width = 16, height = 5,
        units = 'cm', useDingbats = FALSE)
 
 
@@ -364,7 +364,7 @@ p3 = dat0 %>%
     legend.title = element_text(size = 5),
   )
 p3
-ggsave('fig/final/EFig4/lollipop-genes.pdf', p3, width = 8, height = 8, 
+ggsave('fig/EFig4/lollipop-genes.pdf', p3, width = 8, height = 8, 
        units = 'cm', useDingbats = FALSE)
 
 ###############################################################################-
@@ -417,6 +417,6 @@ p4 = dat0 %>%
     legend.title = element_text(size = 5),
   )
 p4
-ggsave('fig/final/EFig4/lollipop-GO.pdf', p4, width = 18, height = 8, 
+ggsave('fig/EFig4/lollipop-GO.pdf', p4, width = 18, height = 8, 
        units = 'cm', useDingbats = FALSE)
 

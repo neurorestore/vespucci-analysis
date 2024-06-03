@@ -100,7 +100,7 @@ p1_2
 
 # p1 = p1_1 | p1_2
 p1 = p1_2
-ggsave(paste0("fig/final/Fig1/simulation-setup.pdf"), p1, width = 3, height = 4, units = "cm", useDingbats = FALSE)
+ggsave(paste0("fig/Fig1/simulation-setup.pdf"), p1, width = 3, height = 4, units = "cm", useDingbats = FALSE)
 
 #############################################################################-
 ## Vespucci AUC ####
@@ -162,7 +162,7 @@ p2 = dat0 %>%
           plot.title = element_blank()
           )
 # p2
-ggsave(paste0("fig/final/Fig1/simulation-AUC.pdf"), p2, width = 4, height = 4, units = "cm", useDingbats = FALSE)
+ggsave(paste0("fig/Fig1/simulation-AUC.pdf"), p2, width = 4, height = 4, units = "cm", useDingbats = FALSE)
 
 # read region accuracies ####
 reg = readRDS('data/simulations/spatial-acc-summary.rds') %>%
@@ -367,7 +367,7 @@ p3_2 = reg %>%
         legend.title = element_blank()) 
 p3_2
 p3 = p3_1 | p3_2
-ggsave(paste0("fig/final/Fig1/circle-row.pdf"), p3, width = 6, height = 5, units = "cm", useDingbats = FALSE)
+ggsave(paste0("fig/Fig1/circle-row.pdf"), p3, width = 6, height = 5, units = "cm", useDingbats = FALSE)
 
 
 # set color palette
@@ -431,7 +431,7 @@ p4 = DE %>%
           legend.key.height = unit(0.15, 'lines')
     )
 p4
-ggsave(paste0("fig/final/Fig1/circle-AUPR-boxplot.pdf"), p4, width = 8, height = 6.3, units = "cm", useDingbats = FALSE)
+ggsave(paste0("fig/Fig1/circle-AUPR-boxplot.pdf"), p4, width = 8, height = 6.3, units = "cm", useDingbats = FALSE)
 
 
 #############################################################################-
@@ -522,7 +522,7 @@ p5 = deltas %>%
           legend.position = 'right',
           legend.justification = 'bottom')
 p5
-ggsave(paste0("fig/final/EFig3/circle-delta-heatmap.pdf"), p5, width = 9, height = 6.6, units = "cm", useDingbats = FALSE)
+ggsave(paste0("fig/EFig3/circle-delta-heatmap.pdf"), p5, width = 9, height = 6.6, units = "cm", useDingbats = FALSE)
 
 
 #############################################################################-
@@ -591,7 +591,7 @@ p6_2 = meta %>%
     guides(colour = guide_legend(override.aes = list(size=1))) +
     facet_wrap(~ replicate, nrow = 1, scales='free')
 p6 = wrap_plots(p6_1, p6_2, nrow=2)
-ggsave('fig/final/Fig1/calcagno_registration.pdf', p6, width = 7, height = 3.2, units='cm')
+ggsave('fig/Fig1/calcagno_registration.pdf', p6, width = 7, height = 3.2, units='cm')
 
 
 #############################################################################-
@@ -650,7 +650,7 @@ p7 = meta %>%
           plot.title = element_blank()
     )
 p7
-ggsave(paste0("fig/final/Fig1/calcagno_AUC.pdf"), p7, width = 2, height = 2.7, units = "cm", useDingbats = FALSE)
+ggsave(paste0("fig/Fig1/calcagno_AUC.pdf"), p7, width = 2, height = 2.7, units = "cm", useDingbats = FALSE)
 
 
 ###############################################################################-
@@ -747,7 +747,7 @@ for (idx in seq_along(genes_to_plot)) {
     expr_plots[[idx]] = p
 }
 p8 = wrap_plots(expr_plots, nrow = 1)
-ggsave('fig/final/Fig1/calcagno_genes.pdf', p8, width = 5, height = 2.7,
+ggsave('fig/Fig1/calcagno_genes.pdf', p8, width = 5, height = 2.7,
        units = 'cm', useDingbats = FALSE)
 
 ###############################################################################-
@@ -838,7 +838,7 @@ for (idx in seq_len(nrow(mat))) {
     go_plots[[idx]] = p
 }
 p9 = wrap_plots(go_plots, nrow = 1)
-ggsave('fig/final/Fig1/calcagno_GO-modules.pdf', p9, width = 5, height = 3.5,
+ggsave('fig/Fig1/calcagno_GO-modules.pdf', p9, width = 5, height = 3.5,
        units = 'cm', useDingbats = FALSE)
 
 #############################################################################-
@@ -904,7 +904,7 @@ p10 = meta %>%
         plot.title = element_blank()
     )
 # p10
-ggsave(paste0("fig/final/Fig1/koupourtidou_AUC.pdf"), p10, width = 2, height = 2.7, units = "cm", useDingbats = FALSE)
+ggsave(paste0("fig/Fig1/koupourtidou_AUC.pdf"), p10, width = 2, height = 2.7, units = "cm", useDingbats = FALSE)
 
 ###############################################################################-
 ## Koupourtidou genes ####
@@ -991,7 +991,7 @@ for (idx in seq_along(genes_to_plot)) {
 }
 # p11 = wrap_plots(expr_plots, ncol = 1)
 p11 = wrap_plots(expr_plots, nrow = 1)
-ggsave('fig/final/Fig1/koupourtidou_genes.pdf', p11, width = 3.5, height = 3.5,
+ggsave('fig/Fig1/koupourtidou_genes.pdf', p11, width = 3.5, height = 3.5,
        units = 'cm', useDingbats = FALSE)
 
 ###############################################################################-
@@ -1095,10 +1095,5 @@ for (idx in seq_len(nrow(mat))) {
     go_plots[[idx]] = p
 }
 p12 = go_plots[[1]]
-ggsave('fig/final/Fig1/koupourtidou_GO-modules.pdf', p12, width = 2.4, height = 3,
-       units = 'cm', useDingbats = FALSE)
-
-combined_plots = list(expr_plots[[1]], expr_plots[[2]], go_plots[[1]])
-p13 = wrap_plots(combined_plots, nrow=1)
-ggsave('fig/final/Fig1/koupourtidou_genes-and-GO-modules.pdf', p13, width = 5, height = 3.4,
+ggsave('fig/Fig1/koupourtidou_GO-modules.pdf', p12, width = 2.4, height = 3,
        units = 'cm', useDingbats = FALSE)

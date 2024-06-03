@@ -200,7 +200,7 @@ for (idx in seq_len(nrow(mat))) {
 p2 = wrap_plots(go_plots, nrow=1)
 
 p3 = wrap_plots(all_plots, nrow=3)
-ggsave('fig/final/EFig5/genes-GO-modules.pdf', p3, width = 10, height = 6,
+ggsave('fig/EFig5/genes-GO-modules.pdf', p3, width = 10, height = 6,
        units = 'cm', useDingbats = FALSE)
 
 
@@ -250,7 +250,7 @@ p4 = dat0 %>%
         legend.title = element_text(size = 5),
     )
 p4
-ggsave('fig/final/EFig5/lollipop-genes.pdf', p4, width = 8, height = 8, 
+ggsave('fig/EFig5/lollipop-genes.pdf', p4, width = 8, height = 8, 
        units = 'cm', useDingbats = FALSE)
 
 ###############################################################################-
@@ -308,7 +308,7 @@ p5 = dat0 %>%
         legend.title = element_text(size = 5),
     )
 p5
-ggsave('fig/final/EFig5/lollipop-GO.pdf', p4, width = 18, height = 8, 
+ggsave('fig/EFig5/lollipop-GO.pdf', p4, width = 18, height = 8, 
        units = 'cm', useDingbats = FALSE)
 
 

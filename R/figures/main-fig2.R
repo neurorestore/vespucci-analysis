@@ -101,7 +101,7 @@ for (gene in housekeeper_genes) {
 }
 p1 = wrap_plots(plot_list, ncol=1)
 p1
-ggsave('fig/final/Fig2/marker-genes.pdf', p1, width = 10.5, height = 5, units='cm')
+ggsave('fig/Fig2/marker-genes.pdf', p1, width = 10.5, height = 5, units='cm')
 
 ves_dir = 'data/regen/vespucci/'
 comparison_names = c(
@@ -178,7 +178,7 @@ for (comparison_name in names(comparison_names)) {
 }
 p2 = wrap_plots(plot_list, ncol=2)
 # p2
-ggsave('fig/final/Fig2/auc.pdf', p2, width = 8, height = 6, units='cm')
+ggsave('fig/Fig2/auc.pdf', p2, width = 8, height = 6, units='cm')
 
 rctd_res = readRDS('data/regen/analysis/summaries/regen-rctd-res-layer1.rds') %>%
     filter(
@@ -274,7 +274,7 @@ p3 = plot_df %>%
         plot.title = element_text(size = 5)) +
     facet_wrap(~label, nrow=1)
 p3
-ggsave(paste0('fig/final/Fig2/immune-cells-rctd.pdf'), p3, width=8, height=5, units='cm')
+ggsave(paste0('fig/Fig2/immune-cells-rctd.pdf'), p3, width=8, height=5, units='cm')
 
 expr = GetAssayData(sc, slot='counts') %>% NormalizeData()
 meta = sc@meta.data %>%
@@ -462,5 +462,5 @@ for (comparison in names(comparisons)) {
 
     p4 = wrap_plots(plot_list, nrow=2)
     p4
-    ggsave(paste0('fig/final/Fig2/', comparison, '-genes-gos.pdf'), p4, width = 17.5, height = 4.9, units='cm')
+    ggsave(paste0('fig/Fig2/', comparison, '-genes-gos.pdf'), p4, width = 17.5, height = 4.9, units='cm')
 }

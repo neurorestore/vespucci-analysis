@@ -69,7 +69,7 @@ p1 = dat0 %>%
         panel.background = element_rect(fill = 'grey96'),
         plot.title = element_text(size = 5))
 p1
-ggsave("fig/final/EFig6/AUC.pdf", p1, width = 5, height = 5, units = 'cm',
+ggsave("fig/EFig6/AUC.pdf", p1, width = 5, height = 5, units = 'cm',
        useDingbats = FALSE)
 
 ###############################################################################-
@@ -173,7 +173,7 @@ for (idx in seq_along(genes_to_plot)) {
   expr_plots[[idx]] = p
 }
 p1 = wrap_plots(expr_plots, ncol = 2)
-ggsave('fig/final/EFig6/genes.pdf', p1, width = 10, height = 8,
+ggsave('fig/EFig6/genes.pdf', p1, width = 10, height = 8,
        units = 'cm', useDingbats = FALSE)
 
 ###############################################################################-
@@ -256,7 +256,7 @@ for (gene in genes_to_plot) {
   go_plots[[length(go_plots)+1]] = p
 }
 p2 = wrap_plots(go_plots, ncol = 2)
-ggsave('fig/final/EFig6/GO-modules.pdf', p2, width = 10, height = 5.5,
+ggsave('fig/EFig6/GO-modules.pdf', p2, width = 10, height = 5.5,
        units = 'cm', useDingbats = FALSE)
 
 ###############################################################################-
@@ -304,7 +304,7 @@ p3 = dat0 %>%
     legend.title = element_text(size = 5),
   )
 p3
-ggsave('fig/final/EFig6/lollipop-genes.pdf', p3, width = 8, height = 8, 
+ggsave('fig/EFig6/lollipop-genes.pdf', p3, width = 8, height = 8, 
        units = 'cm', useDingbats = FALSE)
 
 ###############################################################################-
@@ -360,5 +360,5 @@ p4 = dat0 %>%
     legend.title = element_text(size = 5),
   )
 p4
-ggsave('fig/final/EFig6/lollipop-GO.pdf', p4, width = 18, height = 8, 
+ggsave('fig/EFig6/lollipop-GO.pdf', p4, width = 18, height = 8, 
        units = 'cm', useDingbats = FALSE)

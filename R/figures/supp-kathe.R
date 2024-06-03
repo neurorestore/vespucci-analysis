@@ -86,7 +86,7 @@ fig6a = meta %>%
           ) 
     # guides(colour = guide_legend(override.aes = list(size=2)))
 # fig6a
-ggsave('fig/final/Efig7/lamina.pdf', fig6a, width=7, height = 8, units='cm')
+ggsave('fig/Efig7/lamina.pdf', fig6a, width=7, height = 8, units='cm')
 
 ves_res = readRDS('data/published_data/vespucci/Kathe2022-seed=42-nsub=10.rds')
 spatial_auc_res = ves_res$spatial_auc_result$aucs
@@ -139,7 +139,7 @@ fig6b = dat0 %>%
           legend.key.height = unit(0.18, 'lines'),
           plot.title = element_text(size = 5))
 # p1
-ggsave('fig/final/Efig7/AUC.pdf', fig6b, width=6, height=7, units='cm')
+ggsave('fig/Efig7/AUC.pdf', fig6b, width=6, height=7, units='cm')
 
 expr = GetAssayData(sc, slot='counts')
 colnames(expr) = gsub('-', '_', colnames(expr))
@@ -231,7 +231,7 @@ for (i in 1:length(genes_to_plot)) {
     expr_plots[[length(expr_plots)+1]] = expr_plot
 }
 fig6c = wrap_plots(expr_plots, nrow=2)
-ggsave(paste0('fig/final/Efig7/genes.pdf'), fig6c, width=18, height=6, units='cm')
+ggsave(paste0('fig/Efig7/genes.pdf'), fig6c, width=18, height=6, units='cm')
 
 ## # Supp Fig 4c - GO
 sc = readRDS('data/published_data/seurat_GO/Kathe2022.rds')
@@ -331,7 +331,7 @@ for (i in 1:length(genes_to_plot)) {
     expr_plots[[length(expr_plots)+1]] = expr_plot
 }
 fig6d = wrap_plots(expr_plots, nrow=2)
-ggsave('fig/final/Efig7/GO.pdf', fig6d, width=18, height=6, units='cm')
+ggsave('fig/Efig7/GO.pdf', fig6d, width=18, height=6, units='cm')
 
 # Supp Fig 6e
 source('R/theme.R')
@@ -376,7 +376,7 @@ fig6e = dat0 %>%
         legend.title = element_text(size = 5),
     )
 fig6e
-ggsave('fig/final/Efig7/lollipop-genes.pdf', fig6e, width=8, height=8, units='cm')
+ggsave('fig/Efig7/lollipop-genes.pdf', fig6e, width=8, height=8, units='cm')
 
 
 # Supp Fig 6f
@@ -437,4 +437,4 @@ fig6f= dat0 %>%
         legend.title = element_text(size = 5),
     )
 fig6f
-ggsave('fig/final/Efig7/lollipop-GO.pdf', fig6f, width=10, height=8, units='cm')
+ggsave('fig/Efig7/lollipop-GO.pdf', fig6f, width=10, height=8, units='cm')

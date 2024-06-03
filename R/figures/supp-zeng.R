@@ -108,7 +108,7 @@ p2 = meta %>%
 # p2
 p0 = wrap_plots(p1, p2, nrow=1)
 # p0
-ggsave('fig/final/EFig8/registration.pdf', p0, width=9, height = 6, units='cm')
+ggsave('fig//EFig8/registration.pdf', p0, width=9, height = 6, units='cm')
 
 # Supp Fig 4b - genes
 
@@ -165,7 +165,7 @@ fig7b = dat0 %>%
           legend.key.height = unit(0.18, 'lines'),
           plot.title = element_text(size = 5))
 fig7b
-ggsave('fig/final/EFig8/AUC.pdf', fig7b, width=6, height=6, units='cm')
+ggsave('fig//EFig8/AUC.pdf', fig7b, width=6, height=6, units='cm')
 
 meta = sc@meta.data %>%
     mutate(
@@ -255,7 +255,7 @@ for (i in 1:length(genes_to_plot)) {
     expr_plots[[length(expr_plots)+1]] = expr_plot
 }
 fig7c = wrap_plots(expr_plots, nrow=4)
-ggsave('fig/final/EFig8/genes.pdf', fig7c, width=10, height=11, units='cm')
+ggsave('fig//EFig8/genes.pdf', fig7c, width=10, height=11, units='cm')
 
 source('R/theme.R')
 dat0 = ves_res$de_feature_result
@@ -299,7 +299,7 @@ p3 = dat0 %>%
         legend.title = element_text(size = 5),
     )
 p3
-ggsave('fig/final/EFig8/lollipop-genes.pdf', p3, width = 8, height = 8, 
+ggsave('fig//EFig8/lollipop-genes.pdf', p3, width = 8, height = 8, 
        units = 'cm', useDingbats = FALSE)
 
 meta = sc@meta.data %>%
@@ -344,38 +344,34 @@ delta = pmap_dfr(pairs, function(...) {
 lvls = with(meta, reorder(cell_type_name, auc, stats::median)) %>% levels()
 range = range(delta$delta)
 
-tests_to_plot = c('t', 'wilcox')
-for (curr_test in tests_to_plot) {
-    labels = tests %>% 
-        filter(test == curr_test) %>% 
-        mutate(celltype1 = factor(celltype1, levels = lvls),
-               celltype2 = factor(celltype2, levels = lvls),
-               lab = ifelse(pval < 0.001/2, '***',
-                            ifelse(pval < 0.01/2, '**',
-                                   ifelse(pval < 0.05/2, '*', ''))))
-    p1 = delta %>% 
-        mutate(celltype1 = factor(celltype1, levels = lvls),
-               celltype2 = factor(celltype2, levels = lvls)) %>% 
-        ggplot(aes(x = celltype2, y = celltype1)) +
-        geom_tile(color = 'white', aes(fill = delta)) +
-        geom_text(data = labels, size = 1, aes(label = lab)) +
-        scale_x_discrete(expand = c(0, 0)) +
-        scale_y_discrete(expand = c(0, 0)) +
-        scale_fill_paletteer_c("pals::kovesi.diverging_bwr_55_98_c37",
-                               name = expression(Delta~AUC),
-                               breaks = range,
-                               labels = format(range, digits = 2)) +
-        guides(fill = guide_colorbar(ticks = FALSE, frame.colour = 'black', title.position='top')) +
-        coord_fixed() +
-        boxed_theme() +
-        theme(axis.title.x = element_blank(),
-              axis.title.y = element_blank(),
-              axis.text.x = element_text(angle = 45, hjust = 1),
-              legend.key.height = unit(0.18, 'lines'),
-              legend.key.width = unit(0.25, 'lines'),
-              legend.position = 'bottom',
-              legend.justification = 'right')
-    # fig3a
-    ggsave(paste0('fig/final/EFig8/celltype-auc-delta-', curr_test, '.pdf'), p1, width=6, height=6, units='cm')
-}
+labels = tests %>% 
+    filter(test == 'wilcox') %>% 
+    mutate(celltype1 = factor(celltype1, levels = lvls),
+           celltype2 = factor(celltype2, levels = lvls),
+           lab = ifelse(pval < 0.001/2, '***',
+                        ifelse(pval < 0.01/2, '**',
+                               ifelse(pval < 0.05/2, '*', ''))))
+p1 = delta %>% 
+    mutate(celltype1 = factor(celltype1, levels = lvls),
+           celltype2 = factor(celltype2, levels = lvls)) %>% 
+    ggplot(aes(x = celltype2, y = celltype1)) +
+    geom_tile(color = 'white', aes(fill = delta)) +
+    geom_text(data = labels, size = 1, aes(label = lab)) +
+    scale_x_discrete(expand = c(0, 0)) +
+    scale_y_discrete(expand = c(0, 0)) +
+    scale_fill_paletteer_c("pals::kovesi.diverging_bwr_55_98_c37",
+                           name = expression(Delta~AUC),
+                           breaks = range,
+                           labels = format(range, digits = 2)) +
+    guides(fill = guide_colorbar(ticks = FALSE, frame.colour = 'black', title.position='top')) +
+    coord_fixed() +
+    boxed_theme() +
+    theme(axis.title.x = element_blank(),
+          axis.title.y = element_blank(),
+          axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.key.height = unit(0.18, 'lines'),
+          legend.key.width = unit(0.25, 'lines'),
+          legend.position = 'bottom',
+          legend.justification = 'right')
+ggsave(paste0('fig//EFig8/celltype-auc-delta-wilcox.pdf'), p1, width=6, height=6, units='cm')
 

@@ -63,7 +63,7 @@ p0 = plot_kinematics(kin,
 )
 p0 = p0 %>% wrap_plots(nrow = 1)
 p0
-ggsave('fig/final/EFig10/kinematics.pdf', p0, width = 16, height = 8, units = 'cm', useDingbats = F)
+ggsave('fig/EFig10/kinematics.pdf', p0, width = 16, height = 8, units = 'cm', useDingbats = F)
 
 sc = readRDS('data/regen/seurat/regen_final.rds')
 sc@meta.data %<>%
@@ -187,7 +187,7 @@ p1c
 # combine and save together
 p1 = p1a | p1b | p1c
 p1
-ggsave("fig/final/EFig10/per-section-metrics.pdf", p1,
+ggsave("fig/EFig10/per-section-metrics.pdf", p1,
        width = 7, height = 3.5, units = "cm", useDingbats = FALSE)
 
 # histogram: number of genes
@@ -209,7 +209,7 @@ p2_1 = meta %>%
                hjust = 0, vjust = 1, size = 1.5, fill = NA, label.size = NA,
                label.padding = unit(0.45, 'lines'))
 p2_1
-# ggsave("fig/final/EFig10/n-genes-histogram.pdf", p2_1, width = 4, height = 3, units = "cm", useDingbats = FALSE)
+# ggsave("fig/EFig10/n-genes-histogram.pdf", p2_1, width = 4, height = 3, units = "cm", useDingbats = FALSE)
 # 
 # histogram: number of UMIs
 
@@ -231,7 +231,7 @@ p2_2 = meta %>%
                hjust = 0, vjust = 1, size = 1.5, fill = NA, label.size = NA,
                label.padding = unit(0.45, 'lines'))
 p2_2
-# ggsave("fig/final/EFig10/n-UMIs-histogram.pdf", p2_2, width = 4, height = 3, units = "cm", useDingbats = FALSE)
+# ggsave("fig/EFig10/n-UMIs-histogram.pdf", p2_2, width = 4, height = 3, units = "cm", useDingbats = FALSE)
 
 # percent mitochondrial
 median3 = round(median(meta$pct_mito),2)
@@ -252,7 +252,7 @@ p2_3 = meta %>%
                hjust = 0, vjust = 1, size = 1.5, fill = NA, label.size = NA,
                label.padding = unit(0.45, 'lines'))
 p2_3
-# ggsave("fig/final/EFig10/pct-mito-histogram.pdf", p2_3, width = 4, height = 3, units = "cm", useDingbats = FALSE)
+# ggsave("fig/EFig10/pct-mito-histogram.pdf", p2_3, width = 4, height = 3, units = "cm", useDingbats = FALSE)
 
 # correlation
 meta %<>% 
@@ -282,14 +282,14 @@ p2_4 = meta %>%
         legend.key.height = unit(0.15, 'lines')
         )
 # p2_4
-# ggsave("fig/final/EFig10/n-UMIs-vs-n-genes-density.pdf", p2_4, width = 4, height = 4.33, units = "cm", useDingbats = FALSE)
+# ggsave("fig/EFig10/n-UMIs-vs-n-genes-density.pdf", p2_4, width = 4, height = 4.33, units = "cm", useDingbats = FALSE)
 
 p2 = wrap_plots(p2_1,p2_2,p2_3,p2_4, ncol=4)
-ggsave("fig/final/EFig10/summary-stats.pdf", p2, width = 11, height = 3.5, units = "cm", useDingbats = FALSE)
+ggsave("fig/EFig10/summary-stats.pdf", p2, width = 11, height = 3.5, units = "cm", useDingbats = FALSE)
 
 p3 = wrap_plots(p1, p2, widths=c(7,4))
 # p3
-ggsave("fig/final/EFig10/top-row.pdf", p3, width = 18, height = 12, units = "cm", useDingbats = FALSE)
+ggsave("fig/EFig10/top-row.pdf", p3, width = 18, height = 12, units = "cm", useDingbats = FALSE)
 
 expr = GetAssayData(sc, slot='counts') %>% NormalizeData()
 meta = sc@meta.data %>%
@@ -485,7 +485,7 @@ for (comparison in names(comparisons)) {
     p1 = wrap_plots(plot_list, ncol=2)
     p1
     
-    ggsave(paste0('fig/final/EFig10/', comparison, '-genes-gos.pdf'), p1, width = 8, height = ifelse(comparison == 'treated-old', 7, 10), units='cm')
+    ggsave(paste0('fig/EFig10/', comparison, '-genes-gos.pdf'), p1, width = 8, height = ifelse(comparison == 'treated-old', 7, 10), units='cm')
 }
 
 de_res1 = readRDS('data/regen/regen_final_treated_old-seed=42-nsub=10.rds')$de_feature_result
@@ -526,4 +526,4 @@ p5 = combined_df %>%
         aspect.ratio = 1
     )
 p5
-ggsave('fig/final/EFig10/p_val_cor.pdf', p5, width=4, height=3, units='cm')
+ggsave('fig/EFig10/p_val_cor.pdf', p5, width=4, height=3, units='cm')

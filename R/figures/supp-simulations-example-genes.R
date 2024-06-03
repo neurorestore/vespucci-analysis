@@ -245,6 +245,6 @@ expr_plots[[length(expr_plots)]] = expr_plots[[length(expr_plots)]] +
         legend.title = element_text(size=5)
     )
 p0 = wrap_plots(expr_plots, ncol = 4)
-ggsave(paste0('fig/final/EFig1/circle.pdf'), p0, width = 12, height = 13, units='cm')
+ggsave(paste0('fig/EFig1/circle.pdf'), p0, width = 12, height = 13, units='cm')
 
 
