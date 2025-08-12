@@ -1,4 +1,3 @@
-library(Seurat)
 library(tidyverse)
 library(magrittr)
 library(spacexr)
@@ -8,18 +7,26 @@ library(SpatialExperiment)
 library(SPARK)
 library(reticulate)
 library(SPADE)
-use_condaenv('de-methods')
+use_condaenv('/work/upcourtine/envs/de-methods')
 source_python('python/analysis/spade_naiveDE_functions.py')
 library(Giotto)
-
+library(singleCellHaystack)
+library(MERINGUE)
+library(dHSIC)
+library(Rfast)
+library(FactoMineR)
+library(parallel)
+library(furrr)
+source('R/functions/boostGP/boost_gp.R')
+source("R/functions/boostMI/Boost_Ising_function.R")
 # methods that has filtering: seurat methods, nnsvg
 
-run_spatial_de = function(input, meta, gene_features, de_method = 'wilcox', filter_genes = FALSE, selected_features = NULL, giotto_python_path = NULL){
+run_spatial_de = function(input, meta, gene_features, de_method = 'wilcox', filter_genes = FALSE, selected_features = NULL, giotto_python_path = NULL, group1 = 'Perturbation_1', group2 = 'Perturbation_2', cores = 16){
 	if (de_method %in% c('wilcox', 'markvariogram', 'moransi')){
 		sc = CreateSeuratObject(input, assay='Spatial')
 		sc@meta.data = meta
 		coords_df = meta %>%
-			select(x,y) %>%
+			dplyr::select(x,y) %>%
 			set_rownames(meta$barcode)
 		sc@images$image = new(Class='SlideSeq', assay='Spatial', key='image_', coordinates = coords_df)
 
@@ -78,10 +85,10 @@ run_spatial_de = function(input, meta, gene_features, de_method = 'wilcox', filt
 			spe = scuttle::computeLibraryFactors(spe)
 		}
 		spe = scuttle::logNormCounts(spe)
-		spe = nnSVG(spe, n_threads = 1)
+		spe = nnSVG(spe, n_threads = cores)
 		output_res = rowData(spe)@listData %>%
 			data.frame() %>%
-			select(LR_stat, pval, padj) %>%
+			dplyr::select(LR_stat, pval, padj) %>%
 			set_colnames(c('stat', 'p_val', 'p_val_adj'))
 		output_res$gene = rownames(spe)
 		output_res %<>%
@@ -90,7 +97,7 @@ run_spatial_de = function(input, meta, gene_features, de_method = 'wilcox', filt
 		## https://raw.githack.com/dmcable/spacexr/master/vignettes/differential-expression.html
 		# spatial RNA
 		coords = meta %>%
-			select(x,y) %>%
+			dplyr::select(x,y) %>%
 			set_rownames(meta$barcode)
 		nUMIs = colSums(input)
 		puck = SpatialRNA(coords, input, nUMIs)
@@ -138,13 +145,67 @@ run_spatial_de = function(input, meta, gene_features, de_method = 'wilcox', filt
 				log_fc_thresh = 0)$all_genes %>% mutate(cell_type = cell_type, gene = gene_list_tot, p_val_adj = p.adjust(p_val, method = 'BH')))
 		}
 		output_res %<>%
-			select(cell_type, gene, Z_score, p_val, p_val_adj) %>%
+			dplyr::select(cell_type, gene, Z_score, p_val, p_val_adj) %>%
 			dplyr::rename(stat = Z_score)
-	} else if (de_method == 'trendsceek') {
+	}else if (de_method == 'cside_lab') {
+		## https://raw.githack.com/dmcable/spacexr/master/vignettes/differential-expression.html
+		# spatial RNA
+		coords = meta %>%
+			dplyr::select(x,y) %>%
+			set_rownames(meta$barcode)
+		nUMIs = colSums(input)
+		puck = SpatialRNA(coords, input, nUMIs)
+
+		# cell type (label actually? since DE is across all label) specific
+		cell_types  = as.factor(meta$cell_type)
+		cell_type_threshold = 125 # default
+		if (length(unique(cell_types)) == 1){
+			cell_types = as.factor(sample(paste0('Celltype', 1:2), length(cell_types), replace=T))
+			gene_features$CellTypeB_is_selected = 1
+			gene_features$CellTypeA_is_selected = 0
+			cell_type_threshold = 0
+		}
+
+		names(cell_types) = meta$barcode
+		reference = Reference(input, cell_types, nUMIs)
+		celltypeA_cols = colnames(gene_features[grepl('CellTypeA', colnames(gene_features)) & grepl('_is_selected', colnames(gene_features))])
+		celltypeB_cols = colnames(gene_features[grepl('CellTypeB', colnames(gene_features)) & grepl('_is_selected', colnames(gene_features))])
+
+		if (length(celltypeA_cols) > 1){	
+			celltypeA_profiles = rowMeans(gene_features[,celltypeA_cols])
+			celltypeB_profiles = rowMeans(gene_features[,celltypeB_cols])	
+		} else {
+			celltypeA_profiles = gene_features[,celltypeA_cols]
+			celltypeB_profiles = gene_features[,celltypeB_cols]
+		}
+		cell_type_profiles = cbind(celltypeA_profiles, celltypeB_profiles)
+		colnames(cell_type_profiles) = c('CellTypeA', 'CellTypeB')
+		rownames(cell_type_profiles) = gene_features$Gene
+
+		rctd_res = create.RCTD(puck, reference, cell_type_profiles = cell_type_profiles, max_cores = 2)
+		rctd_res = run.RCTD(rctd_res, doublet_mode = 'doublet')
+		exp_var = exvar.point.density(rctd_res, rownames(coords), coords[,c('x','y','label')], radius = 500)
+		rctd_res = run.CSIDE.single(rctd_res, exp_var, fdr = 1, log_fc_thresh = 0, gene_threshold = 0, test_genes_sig=F, cell_type_threshold = cell_type_threshold)
+		
+		# custom run de test
+		gene_list_tot = spacexr:::filter_genes(puck, threshold = 0)
+		X2 = build.designmatrix.single(rctd_res, exp_var)
+		gene_fits = rctd_res@de_results$gene_fits
+		cell_types_present = unique(meta$cell_type)
+		output_res = data.frame()
+		for (cell_type in cell_types_present){
+			output_res %<>% rbind(., 
+				spacexr:::find_sig_genes_individual(cell_type, cell_types_present, gene_fits,gene_list_tot, X2, params_to_test = 2, fdr = 1, p_thresh = 1,
+				log_fc_thresh = 0)$all_genes %>% mutate(cell_type = cell_type, gene = gene_list_tot, p_val_adj = p.adjust(p_val, method = 'BH')))
+		}
+		output_res %<>%
+			dplyr::select(cell_type, gene, Z_score, p_val, p_val_adj) %>%
+			dplyr::rename(stat = Z_score)
+	}  else if (de_method == 'trendsceek') {
 		## only works with spatstat 1.64.1
 		## from Giotto https://github.com/RubD/Giotto/blob/HEAD/R/spatial_genes.R
 		coords = meta %>%
-			select(x,y) %>%
+			dplyr::select(x,y) %>%
 			set_rownames(meta$barcode)
 
 		input = input[rowSums(input) > 0,]
@@ -186,7 +247,7 @@ run_spatial_de = function(input, meta, gene_features, de_method = 'wilcox', filt
 			output_res %<>% rbind(tmp_df)
 		}
 	} else if (de_method == 'spark') {
-		location = meta %>% select(x, y)
+		location = meta %>% dplyr::select(x, y)
 		spark = CreateSPARKObject(counts = input, 
 								location = location,
 								percentage = 0,
@@ -207,7 +268,7 @@ run_spatial_de = function(input, meta, gene_features, de_method = 'wilcox', filt
 		)
 		output_res$p_val_adj = p.adjust(output_res$p_val, method = 'BH')
 	} else if (de_method == 'sparkx') {
-		location = meta %>% select(x, y)
+		location = meta %>% dplyr::select(x, y)
 		sparkX = sparkx(input, location, numCores=1, option='mixture')
 		output_res = data.frame(
 			'gene' = rownames(sparkX$res_mtest),
@@ -224,7 +285,7 @@ run_spatial_de = function(input, meta, gene_features, de_method = 'wilcox', filt
 		# custom create data.frame with first 2 columns as x,y and other cols as genes
 		data = t(input)
 		coords = meta %>% 
-			select(x,y) %>% set_rownames(meta$barcode) %>% set_colnames(c('row', 'col'))
+			dplyr::select(x,y) %>% set_rownames(meta$barcode) %>% set_colnames(c('row', 'col'))
 		coords = coords[rownames(data),]
 		data = cbind(coords, data)
 
@@ -318,18 +379,18 @@ run_spatial_de = function(input, meta, gene_features, de_method = 'wilcox', filt
 			mutate(
 				p_val = pval
 			) %>%
-			select(gene, p_val, p_val_adj) %>%
+			dplyr::select(gene, p_val, p_val_adj) %>%
 			set_rownames(NULL)
 	} else if (de_method == 'spade') {
 		labels = unique(meta$label)
 		
 		cells1 = meta %>% filter(label == labels[1]) %>% pull(barcode)
 		counts1 = input[, cells1]
-		info1 = meta %>% filter(label == labels[1]) %>% select(x,y)
+		info1 = meta %>% filter(label == labels[1]) %>% dplyr::select(x,y)
 
 		cells2 = meta %>% filter(label == labels[2]) %>% pull(barcode)
 		counts2 = input[, cells2]
-		info2 = meta %>% filter(label == labels[2]) %>% select(x,y)
+		info2 = meta %>% filter(label == labels[2]) %>% dplyr::select(x,y)
 		
 		stable1 = stabilize(as.matrix(counts1))
 		info1$total_counts = colSums(counts1)
@@ -411,7 +472,7 @@ run_spatial_de = function(input, meta, gene_features, de_method = 'wilcox', filt
 			dplyr::select(gene, p_val, p_val_adj)
 	} else if (de_method %in% c('scran', 'mast', 'binSpect_kmeans', 'binSpect_rank')){
 		coords_df = meta %>%
-			select(x,y) %>%
+			dplyr::select(x,y) %>%
 			set_rownames(meta$barcode)
 		giotto_instructions = createGiottoInstructions(python_path = giotto_python_path)
 		input = input[rowSums(input) > 0,]
@@ -428,7 +489,7 @@ run_spatial_de = function(input, meta, gene_features, de_method = 'wilcox', filt
 			)
 			output_res = gene_markers %>%
 				as.data.frame() %>%
-				select(genes, p.value) %>%
+				dplyr::select(genes, p.value) %>%
 				set_colnames(c('gene', 'p_val')) 
 			output_res$p_val_adj = p.adjust(output_res$p_val, method='BH')	
 		} else if (de_method == 'mast') {
@@ -436,31 +497,103 @@ run_spatial_de = function(input, meta, gene_features, de_method = 'wilcox', filt
 				gobject = giotto_obj,
 				expression_values = 'normalized',
 				cluster_column = 'label',
-				group_1 = 'Perturbation_1',
-				group_1_name = 'Perturbation_1',
-				group_2 = 'Perturbation_2',
-				group_2_name = 'Perturbation_2'
+				group_1 = group1,
+				group_1_name = group1,
+				group_2 = group2,
+				group_2_name = group2
 			)
 			output_res = gene_markers %>%
 				as.data.frame() %>%
-				select(genes, `Pr(>Chisq)`) %>%
+				dplyr::select(genes, `Pr(>Chisq)`) %>%
 				set_colnames(c('gene', 'p_val'))
 			output_res$p_val_adj = p.adjust(output_res$p_val, method='BH')
 		} else if (de_method == 'binSpect_kmeans'){
 			giotto_obj %<>% createSpatialDelaunayNetwork()
 			km_spatialgenes = binSpect(giotto_obj, bin_method = 'kmeans')
 			output_res = km_spatialgenes %>%
-				select(genes, p.value) %>%
+				dplyr::select(genes, p.value) %>%
 				set_colnames(c('gene', 'p_val'))
 			output_res$p_val_adj = p.adjust(output_res$p_val, method='BH')	
 		} else if (de_method == 'binSpect_rank'){
 			giotto_obj %<>% createSpatialDelaunayNetwork()
 			km_spatialgenes = binSpect(giotto_obj, bin_method = 'rank')
 			output_res = km_spatialgenes %>%
-				select(genes, p.value) %>%
+				dplyr::select(genes, p.value) %>%
 				set_colnames(c('gene', 'p_val'))
 			output_res$p_val_adj = p.adjust(output_res$p_val, method='BH')	
 		} 
+	} else if (de_method == 'haystack') {
+		haystack_out = haystack(meta[,c('x','y')], input)
+		# log.p.vals log10 p.values calculated from randomization.
+		output_res = haystack_out$results %>% mutate(gene = rownames(.), p_val = 10^(log.p.vals)) %>% dplyr::select(gene, D_KL, p_val) %>% dplyr::rename(stat = D_KL)
+		output_res$p_val_adj = p.adjust(output_res$p_val, method = 'BH')
+	} else if (de_method == 'meringue') {
+		# from https://jef.works/MERINGUE/mOB_analysis
+		pos = meta[,c('x', 'y')]
+		w = getSpatialNeighbors(pos)
+		# I = getSpatialPatterns(input[1:100,], w)
+		I = getSpatialPatterns(input, w)
+		output_res = I %>%
+			mutate(gene = rownames(.)) %>%
+			dplyr::select(gene, observed, p.value, p.adj) %>%
+			set_colnames(c('gene', 'stat', 'p_val', "p_val_adj"))
+	} else if (de_method == 'hsic') {
+		# from https://github.com/XiDsLab/svg-benchmark/blob/main/Methods/run_HSIC.R
+		set.seed(42)
+		plan(multisession, workers = cores)
+		coords = meta[,c('x', 'y')]
+		output_res = future_map_dfr(1:nrow(input), function(x){
+			tmp = dhsic.test(cbind(input[x,]),coords, B = 100, method = 'gamma')
+			data.frame(
+				gene = rownames(input)[x],
+				stat = tmp$statistic,
+				p_val = tmp$p.value
+			)
+		}) %>%
+		mutate(p_val_adj = p.adjust(p_val, method='BH'))
+	} else if (de_method == 'dCor') {
+		# from https://github.com/XiDsLab/svg-benchmark/commit/ff6abccad283a3179a71ffca7e182b2f38e71a5c#diff-2836d7419fe37f26034a7b1c116a734576ab18d7e5725fdcf323147e65ed56ed current script is off but old commit seems to show it
+		plan(multisession, workers = cores)
+		coords = meta[,c('x', 'y')]
+		output_res = future_map_dfr(1:nrow(input), function(x){
+			tmp = dcor.ttest(cbind(input[x,]),coords)
+			data.frame(
+				gene = rownames(input)[x],
+				stat = tmp['statistic'],
+				p_val = tmp['p-value']
+			)
+		}) %>%
+		mutate(p_val_adj = p.adjust(p_val, method='BH'))
+	} else if (de_method == 'rv') {
+		# from https://github.com/XiDsLab/svg-benchmark/blob/main/Methods/run_RV.R
+		plan(multisession, workers = cores)
+		coords = meta[,c('x', 'y')]
+		output_res = future_map_dfr(1:nrow(input), function(x){
+			tmp = coeffRV(cbind(input[x,]),coords)
+			data.frame(
+				gene = rownames(input)[x],
+				stat = tmp$rv,
+				p_val = tmp$p.value
+			)
+		}) %>%
+		mutate(p_val_adj = p.adjust(p_val, method='BH'))
+	} else if (de_method == 'boostgp') {
+		# from https://github.com/XiDsLab/svg-benchmark/blob/main/Methods/run_boostGP.R and https://github.com/Minzhe/BOOST-GP/tree/main
+		coords = data.matrix(meta[,c('x', 'y')])
+		input = data.matrix(t(input))
+		boostGP_res = boost.gp(Y = input, loc = coords)
+		output_res = boostGP_res %>%
+			mutate(
+				gene = rownames(.),
+				stat = BF,
+				p_val = pval
+			) %>%
+			dplyr::select(gene, stat, p_val) %>%
+			mutate(p_val_adj = p.adjust(p_val, method='BH'))
+	} else if (de_method == 'boostMI') {
+		# from https://github.com/XiDsLab/svg-benchmark/blob/main/Methods/run_boostising.R and https://github.com/Xijiang1997/BOOST-MI
+		coords = data.matrix(meta[,c('x', 'y')])
+		output_res = Boost_Ising(t(input), coords, norm_method = 'tss', clustermethod = 'MGC')
 	}
 	return (output_res)
 }

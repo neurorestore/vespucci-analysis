@@ -1,4 +1,5 @@
-setwd('~/git/vespucci-analysis/')
+# setwd('C:/Users/teo/Documents/EPFL/projects/vespucci/')
+setwd('~/git/vespucci/')
 library(tidyverse)
 library(magrittr)
 library(Seurat)
@@ -18,7 +19,7 @@ source('R/theme.R')
 ###############################################################################-
 
 # read data
-sc = readRDS("data/simulations/objects/input=circle-de_prob=0.2-de_size=2-reps=3-rep_de_jitter=1-rep_depth_jitter=0.3-seed=0.rds")
+sc = readRDS("data/simulations/objects/input=circle_2x-ct=none-de_prob=0.2-de_size=2-ct_prob=0-ct_size=0-overlap=0-reps=3-rep_de_jitter=1-rep_depth_jitter=0.3-seed=0.rds")
 meta = sc@meta.data
 
 # extract data
@@ -100,15 +101,14 @@ p1_2
 
 # p1 = p1_1 | p1_2
 p1 = p1_2
-ggsave(paste0("fig/Fig1/simulation-setup.pdf"), p1, width = 3, height = 4, units = "cm", useDingbats = FALSE)
+ggsave(paste0("fig/final/Fig1/simulation-setup.pdf"), p1, width = 3, height = 4, units = "cm", useDingbats = FALSE)
 
 #############################################################################-
 ## Vespucci AUC ####
 #############################################################################-
 
-ves_res = readRDS('data/simulations/vespucci/input=circle-de_prob=0.2-de_size=2-reps=3-rep_de_jitter=1-rep_depth_jitter=0.3-seed=0-ves_seed=42.rds')
+auc_res = readRDS('data/simulations/vespucci/input=circle_2x-ct=none-de_prob=0.2-de_size=2-ct_prob=0-ct_size=0-overlap=0-reps=3-rep_de_jitter=1-rep_depth_jitter=0.3-seed=0-ves_seed=42-max_cells=100-lo=eu_ma.rds')$aucs
 
-auc_res = ves_res$spatial_auc_result$aucs
 dat0 %<>%
     left_join(auc_res)
 
@@ -162,13 +162,13 @@ p2 = dat0 %>%
           plot.title = element_blank()
           )
 # p2
-ggsave(paste0("fig/Fig1/simulation-AUC.pdf"), p2, width = 4, height = 4, units = "cm", useDingbats = FALSE)
+ggsave(paste0("fig/final/Fig1/simulation-AUC.pdf"), p2, width = 4, height = 4, units = "cm", useDingbats = FALSE)
 
 # read region accuracies ####
-reg = readRDS('data/simulations/spatial-acc-summary.rds') %>%
+reg = readRDS('data/simulations/summaries/spatial_acc.rds') %>%
     type_convert() %>%
     filter(
-        input == 'circle',
+        input == 'circle_2x',
         type == 'AUPRC'
     ) %>%
     mutate(
@@ -176,21 +176,120 @@ reg = readRDS('data/simulations/spatial-acc-summary.rds') %>%
     )
 
 # read timing results ####
-time = readRDS('data/simulations/time-summary.rds') %>%
-    mutate(
-        method = ifelse(method == 'vespucci', 'Meta-learning', 'Exhaustive search')
-    ) %>%
+# summarise Magellan
+magellan_files = list.files('data/simulations/summaries/magellan', 
+                            full.names = TRUE) %>% 
+    extract(grepl('circle_2x', .))
+magellan_time = map_df(magellan_files, ~ {
+    readRDS(.x) %>%
+        group_by(input, seed) %>%
+        summarise(
+            time = sum(time / 3600)
+        ) %>%
+        mutate(units = 'hours', method = 'Exhaustive search')
+})
+# magellan runs on 4 threads
+magellan_time$time %<>% `*`(4)
+
+# summarise Vespucci
+vespucci_files = list.files('data/simulations/vespucci',
+                            full.names = TRUE) %>% 
+    extract(grepl('circle_2x', .))
+vespucci_files_df = map_df(vespucci_files, ~ {
+    ori_filename = .x
+    filename = gsub('\\.rds|\\.csv', '', basename(ori_filename))
+    names = c('ori_filename')
+    values = c(ori_filename)
+    
+    for (item in strsplit(filename, '-')[[1]]){
+        temp = strsplit(item, '=')[[1]]
+        if (length(temp) > 1){
+            names = c(names, temp[1])
+            values = c(values, temp[2])
+        }
+    }
+    names(values) = names
+    values
+})
+vespucci_files = vespucci_files_df %>%
     filter(
-        input == 'circle'
-    )
+        (
+            (de_prob == 0.5 & input %in% c('stripes', 'circle_overlap', 'flag')) |
+                (de_prob == 0.2 & input %in% c('gradient', 'radial', 'circle_2x'))
+        ),
+        max_cells == 100
+    ) %>% pull(ori_filename)
+vespucci_time = map_df(vespucci_files, function(x){
+    tmp = readRDS(x)
+    input = gsub('input=', '', basename(x))
+    input = gsub('-.*', '', input)
+    seed = gsub('.*-seed=', '', basename(x))
+    seed = gsub('-.*', '', seed)
+    full_time = 
+        sum(tmp$time_tracking$global$time) + 
+        sum(tmp$time_tracking$auc$time)/60 * 8 + # vespucci runs on 8 threads
+        sum(tmp$time_tracking$cor_convergence$model_time) +
+        sum(tmp$time_tracking$cor_convergence$predict_time) 
+    full_time = full_time/60
+    return(data.frame(
+        input = input,
+        seed = seed,
+        time = as.numeric(full_time),
+        units = 'hours',
+        method = 'Meta-learning'
+    ))
+})
+time = rbind(
+    magellan_time %>% type_convert(),
+    vespucci_time %>% type_convert()
+)
 
 # read AUPR results #### 
-ves_de_res = readRDS('data/simulations/vespucci_de/input=circle-de_prob=0.2-de_size=2-reps=3-rep_de_jitter=1-rep_depth_jitter=0.3-seed=0-ves_seed=42.rds')
-other_de_stats = readRDS('data/simulations/summaries/de-results.rds') %>%
-    filter(
-        input == 'circle'
-    )
+# ves_res = readRDS('data/simulations/summaries/de_results/all_vespucci_de_auroc_summary.rds') %>%
+#     type_convert() %>%
+#     dplyr::select(-input_file, -lo) %>%
+#     dplyr::rename(iter = ves_seed) %>%
+#     filter(
+#         input == 'circle_2x',
+#         iter == 42,
+#         de_model == 'nebula_nbgmm',
+#         # de_prob == 0.5,
+#         max_cells == 100
+#     ) %>%
+#     dplyr::select(input, seed, de_method, auprc_integral) %>%
+#     mutate(input='circle')
+# ves_res = readRDS('data/simulations/summaries/de_results/all_vespucci_de_auroc_summary_new.rds') %>% 
+ves_res = readRDS('/work/upcourtine/vespucci/simulations/summaries/de_results/all_vespucci_de_auroc_summary_new.rds') %>% 
+    filter(input == 'circle', max_cells == 100, ves_seed == 42) %>% 
+    dplyr::select(input, seed, auprc_integral) %>% mutate(de_method = 'vespucci')
 
+splatter_de_stats = readRDS('data/simulations/summaries/de_results/splatter_de_results.rds') %>%
+    dplyr::select(-ori_filename) %>%
+    mutate(
+        de_method = 'DE only',
+        iter = 0,
+        prop = -1,
+        nsub = -1
+    ) %>%
+    filter(
+        input == 'circle_2x'
+    )
+other_de_stats = readRDS('data/simulations/summaries/de_results/other_methods_stats_new.rds') %>%
+    dplyr::select(-cell_type) %>% # no cell type effect for now
+    mutate(
+        iter = 0,
+        prop = -1,
+        nsub = -1
+    ) %>%
+    filter(
+        de_method != 'hsic',
+        p_value_treatment == 'filtered',
+        input == 'circle'
+    ) %>%
+    dplyr::select(-ngenes, -ori_gene_size, -p_value_treatment)
+other_de_stats %>% dplyr::select(input, de_method) %>% table()
+# splatter_de_stats = splatter_de_stats[colnames(ves_res)]
+other_de_stats = other_de_stats[colnames(ves_res)]
 color_set = data.frame(
     de_method = c(
         'DE only',
@@ -201,6 +300,7 @@ color_set = data.frame(
         'wilcox',
         'nnsvg',
         'spatialDE',
+        'spatialDE2',
         'heartsvg',
         'squidpy_permutation',
         'squidpy_normality',
@@ -209,6 +309,15 @@ color_set = data.frame(
         'mast',
         'binSpect_kmeans',
         'binSpect_rank',
+        'haystack',
+        'dCor',
+        'hsic',
+        'meringue',
+        'rv',
+        'somde',
+        'spagft',
+        'spanve',
+        'magellan',
         'vespucci'
     ),
     color = c(
@@ -219,9 +328,19 @@ color_set = data.frame(
         rep('Seurat',2),
         'nnSVG',
         'SpatialDE',
+        'SpatialDE2',
         'HEARTSVG',
         rep('SquidPy',3),
         rep('Giotto', 4),
+        'SingleCellHayStack',
+        'dCor',
+        'Hsic',
+        'MERINGUE',
+        'RV',
+        'SomDE',
+        'Spagft',
+        'Spanve',
+        'Magellan',
         'Vespucci'
     ),
     x_name = c(
@@ -233,6 +352,7 @@ color_set = data.frame(
         'Wilcoxon rank-sum test',
         'nnSVG',
         'SpatialDE',
+        'SpatialDE2',
         'HEARTSVG',
         'Squidpy (permutation test)',
         'Squidpy (normality ass.)',
@@ -241,21 +361,32 @@ color_set = data.frame(
         'MAST',
         'binSpect (k-means)',
         'binSpect (rank)',
+        'SingleCellHayStack',
+        'dCor',
+        'Hsic',
+        'MERINGUE',
+        'RV',
+        'SomDE',
+        'Spagft',
+        'Spanve',
+        'Magellan',
         'Vespucci'
     )
 )
-
 DE = rbind(
-    ves_de_res,
+    # splatter_de_stats,
+    ves_res,
     other_de_stats
-) %>% dplyr::rename(val = auprc_integral)
+) %>% dplyr::rename(val = auprc_integral) %>% filter(de_method != 'somde')
 DE %>% dplyr::select(seed, de_method) %>% table()
 DE %<>% left_join(color_set, by = 'de_method')
 
+stopifnot(nrow(time) == 20)
 labs = time %>%
     group_by(input, method) %>%
     summarise(
         time = max(time),
+        # label = paste0(round(median(time), 1), ' h')
         label = paste0(round(mean(time), 1), ' h')
     )
 
@@ -265,7 +396,7 @@ delta = time %>%
     summarise(delta = time[method == 'Meta-learning'] - 
                   time[method == 'Exhaustive search']) %>% 
     ungroup()
-
+stopifnot(nrow(delta) == 10)
 pval = t.test(delta$delta)$p.value %>% 
     format(format = 'f', digits = 2) %>% 
     paste0('p = ', .)
@@ -311,6 +442,7 @@ p3_1
 ## Vespucci vs. Magellan, region AUC ####
 #############################################################################-
 
+stopifnot(nrow(reg) == 20)
 labs = reg %>%
     group_by(method, input) %>%
     summarise(
@@ -367,18 +499,17 @@ p3_2 = reg %>%
         legend.title = element_blank()) 
 p3_2
 p3 = p3_1 | p3_2
-ggsave(paste0("fig/Fig1/circle-row.pdf"), p3, width = 6, height = 5, units = "cm", useDingbats = FALSE)
-
+ggsave(paste0("fig/final/Fig1/circle-row.pdf"), p3, width = 6, height = 5, units = "cm", useDingbats = FALSE)
 
 # set color palette
-pal = nr_base_11_light[1:10]
-names(pal) = unique(DE$color[!DE$color %in% c('Vespucci')])
+# pal = nr_base_11_light[1:11]
+pal = pals::kelly(17)
+names(pal) = unique(DE$color[!DE$color %in% c('Magellan', 'Vespucci')])
 pal['Vespucci'] = nr_base_5[1]
 alpha_pal = c('max'=1, 'min'=0.3)
 
 # add OOT methods
-oot_df = data.frame(x_name = c('SPARK', 'SPADE', 'trendsceek', 'GPCounts'),
-                    input = 'circle_2x') %>% 
+oot_df = data.frame(x_name = c('SPARK', 'SPADE', 'trendsceek', 'GPCounts', 'BOOST-GP', 'BOOSTMI', 'scGCO', 'HSIC'), input = 'circle') %>% 
     mutate(color = x_name) %>% 
     filter(!x_name %in% DE$x_name)
 DE %<>% bind_rows(oot_df)
@@ -412,13 +543,14 @@ p4 = DE %>%
                fill = color, color = color)) +
     geom_boxplot(size = 0.35, alpha = 0.4, width = 0.6, outlier.shape = NA) +
     geom_label(dat = labs,
-               aes(label = text_val, y = text_y), color = ifelse(text_val == 'OOT', 'grey', 'black'),
+               aes(label = text_val, y = text_y), 
+               color = ifelse(labs$text_val == 'OOT', 'grey', 'black'),
                label.padding = unit(0.35, 'lines'),
                label.size = NA, fill = NA,
                size = 1.75, hjust = 0, vjust = 0.5,
                show.legend = FALSE) +
     coord_flip() +
-    scale_y_continuous('AUPR', breaks = pretty_breaks(), limits = c(0.18, 0.9),
+    scale_y_continuous('AUPR', breaks = pretty_breaks(), limits = c(0.18, 1),
                        expand = expansion(c(0.03, 0.125))) +
     scale_color_manual('', values = pal) +
     scale_fill_manual('', values = pal) +
@@ -431,8 +563,7 @@ p4 = DE %>%
           legend.key.height = unit(0.15, 'lines')
     )
 p4
-ggsave(paste0("fig/Fig1/circle-AUPR-boxplot.pdf"), p4, width = 8, height = 6.3, units = "cm", useDingbats = FALSE)
-
+ggsave(paste0("fig/final/Fig1/circle-AUPR-boxplot.pdf"), p4, width = 8, height = 7.3, units = "cm", useDingbats = FALSE)
 
 #############################################################################-
 ## deltha heatmap ####
@@ -522,13 +653,13 @@ p5 = deltas %>%
           legend.position = 'right',
           legend.justification = 'bottom')
 p5
-ggsave(paste0("fig/EFig3/circle-delta-heatmap.pdf"), p5, width = 9, height = 6.6, units = "cm", useDingbats = FALSE)
+ggsave(paste0("fig/final/Fig1//circle-delta-heatmap.pdf"), p5, width = 9, height = 6.6, units = "cm", useDingbats = FALSE)
 
 
 #############################################################################-
 # Calcagno registration
 #############################################################################-
-sc = readRDS('data/published_data/seurat/Calcagno2022.rds')
+sc = readRDS('data/real_data/seurat/Calcagno2022.rds')
 meta = sc@meta.data %>%
     mutate(
         barcode = gsub('-', '_', barcode),
@@ -591,13 +722,13 @@ p6_2 = meta %>%
     guides(colour = guide_legend(override.aes = list(size=1))) +
     facet_wrap(~ replicate, nrow = 1, scales='free')
 p6 = wrap_plots(p6_1, p6_2, nrow=2)
-ggsave('fig/Fig1/calcagno_registration.pdf', p6, width = 7, height = 3.2, units='cm')
+ggsave('fig/final/Fig1/calcagno_registration.pdf', p6, width = 7, height = 3.2, units='cm')
 
 
 #############################################################################-
 # Calcagno auc
 #############################################################################-
-auc_res = readRDS('data/published_data/vespucci/Calcagno2022-seed=42-nsub=10.rds')$spatial_auc_result$aucs
+auc_res = readRDS('data/real_data/vespucci/Calcagno2022-seed=42-nsub=10.rds')[[1]]$aucs
 meta %<>% left_join(auc_res)
 
 # interpolate in 2D
@@ -650,13 +781,13 @@ p7 = meta %>%
           plot.title = element_blank()
     )
 p7
-ggsave(paste0("fig/Fig1/calcagno_AUC.pdf"), p7, width = 2, height = 2.7, units = "cm", useDingbats = FALSE)
+ggsave(paste0("fig/final/Fig1/calcagno_AUC.pdf"), p7, width = 2, height = 2.7, units = "cm", useDingbats = FALSE)
 
 
 ###############################################################################-
 ## Calcagno genes ####
 ###############################################################################-
-sc = readRDS('data/published_data/seurat/Calcagno2022.rds')
+sc = readRDS('data/real_data/seurat/Calcagno2022.rds')
 meta = sc@meta.data %>%
     mutate(
         barcode = gsub('-', '_', barcode),
@@ -747,7 +878,7 @@ for (idx in seq_along(genes_to_plot)) {
     expr_plots[[idx]] = p
 }
 p8 = wrap_plots(expr_plots, nrow = 1)
-ggsave('fig/Fig1/calcagno_genes.pdf', p8, width = 5, height = 2.7,
+ggsave('fig/final/Fig1/calcagno_genes.pdf', p8, width = 5, height = 2.7,
        units = 'cm', useDingbats = FALSE)
 
 ###############################################################################-
@@ -755,7 +886,7 @@ ggsave('fig/Fig1/calcagno_genes.pdf', p8, width = 5, height = 2.7,
 ###############################################################################-
 
 # load GO
-sc = readRDS('data/published_data/seurat_GO/Calcagno2022.rds')
+sc = readRDS('data/real_data/seurat_GO/DE/Calcagno2022.rds')[[1]]
 go_df = readRDS('data/metadata/go_names.rds')
 meta = sc@meta.data %>%
     mutate(barcode = gsub('-', '_', barcode))
@@ -772,6 +903,10 @@ mat = mat[gos,]
 # iterate through GO terms
 go_plots = list()
 for (idx in seq_len(nrow(mat))) {
+    # go_term = rownames(mat)[idx] %>% 
+    #   chartr('-', ':', .)
+    # descr = go$name[go_term]
+    # title = paste0(go_term, '\n', descr)
     go = rownames(mat)[idx]
     title = go_df$go_name[gsub('\\:', '-', go_df$go) == go]
     
@@ -838,18 +973,18 @@ for (idx in seq_len(nrow(mat))) {
     go_plots[[idx]] = p
 }
 p9 = wrap_plots(go_plots, nrow = 1)
-ggsave('fig/Fig1/calcagno_GO-modules.pdf', p9, width = 5, height = 3.5,
+ggsave('fig/final/Fig1/calcagno_GO-modules.pdf', p9, width = 5, height = 3.5,
        units = 'cm', useDingbats = FALSE)
 
 #############################################################################-
 # Koupourtidou auc
 #############################################################################-
 
-sc = readRDS('data/published_data/seurat/Koupourtidou2024.rds')
+sc = readRDS('data/real_data/seurat/Koupourtidou2024.rds')
 meta = sc@meta.data %>%
     mutate(barcode = gsub('-', '_', barcode))
 
-auc_res = readRDS('data/published_data/vespucci/Koupourtidou2024-seed=42-nsub=10.rds')$spatial_auc_result$aucs
+auc_res = readRDS('data/real_data/vespucci/Koupourtidou2024-seed=42-nsub=10.rds')[[1]]$aucs
 meta %<>% left_join(auc_res)
 
 # interpolate in 2D
@@ -904,11 +1039,15 @@ p10 = meta %>%
         plot.title = element_blank()
     )
 # p10
-ggsave(paste0("fig/Fig1/koupourtidou_AUC.pdf"), p10, width = 2, height = 2.7, units = "cm", useDingbats = FALSE)
+ggsave(paste0("fig/final/Fig1/koupourtidou_AUC.pdf"), p10, width = 2, height = 2.7, units = "cm", useDingbats = FALSE)
 
 ###############################################################################-
 ## Koupourtidou genes ####
 ###############################################################################-
+sc = readRDS('data/real_data/seurat/Koupourtidou2024.rds')
+meta = sc@meta.data %>%
+    mutate(barcode = gsub('-', '_', barcode))
+
 expr = GetAssayData(sc, slot = 'counts')
 colnames(expr) = gsub('-', '_', colnames(expr))
 
@@ -922,6 +1061,7 @@ dat0 = meta %>% dplyr::select(barcode, x, y, label)
 genes_to_plot = c(
     'LCN2', 'PTGDS'
 )
+stopifnot(all(str_to_title(genes_to_plot) %in% rownames(expr)))
 
 # iterate through genes
 expr_plots = list()
@@ -991,7 +1131,8 @@ for (idx in seq_along(genes_to_plot)) {
 }
 # p11 = wrap_plots(expr_plots, ncol = 1)
 p11 = wrap_plots(expr_plots, nrow = 1)
-ggsave('fig/Fig1/koupourtidou_genes.pdf', p11, width = 3.5, height = 3.5,
+ggsave('fig/final/Fig1/koupourtidou_genes.pdf', p11, width = 3.5, height = 3.5,
+# ggsave('fig/final/Fig1/koupourtidou_genes.pdf', p11, width = 6.3, height = 3,
        units = 'cm', useDingbats = FALSE)
 
 ###############################################################################-
@@ -999,7 +1140,7 @@ ggsave('fig/Fig1/koupourtidou_genes.pdf', p11, width = 3.5, height = 3.5,
 ###############################################################################-
 
 # load GO
-sc = readRDS('data/published_data/seurat_GO/Koupourtidou2024.rds')[[1]]
+sc = readRDS('data/real_data/seurat_GO/DE/Koupourtidou2024.rds')[[1]]
 go_df = readRDS('data/metadata/go_names.rds')
 meta = sc@meta.data %>%
     mutate(barcode = gsub('-', '_', barcode))
@@ -1094,6 +1235,14 @@ for (idx in seq_len(nrow(mat))) {
     p
     go_plots[[idx]] = p
 }
+# p12 = wrap_plots(go_plots, ncol = 1)
+# p12 = wrap_plots(go_plots, nrow = 1)
 p12 = go_plots[[1]]
-ggsave('fig/Fig1/koupourtidou_GO-modules.pdf', p12, width = 2.4, height = 3,
+ggsave('fig/final/Fig1/koupourtidou_GO-modules.pdf', p12, width = 2.4, height = 3,
+# ggsave('fig/final/Fig1/koupourtidou_GO-modules.pdf', p12, width = 6.3, height = 3,
+       units = 'cm', useDingbats = FALSE)
+
+combined_plots = list(expr_plots[[1]], expr_plots[[2]], go_plots[[1]])
+p13 = wrap_plots(combined_plots, nrow=1)
+ggsave('fig/final/Fig1/koupourtidou_genes-and-GO-modules.pdf', p13, width = 5, height = 3.4,
        units = 'cm', useDingbats = FALSE)

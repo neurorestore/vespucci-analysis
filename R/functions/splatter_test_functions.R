@@ -314,7 +314,6 @@ splatSimGroupDE = function(sim, params, genes = NULL, de_label_colname = NULL, c
 		}
 
 	}
-
 	return(sim)
 }
 

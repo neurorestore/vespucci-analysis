@@ -11,7 +11,7 @@ load_spatial_parameters = function() {
 }
 
 # function to setup a 'Spatial' simulated grid
-simulated_grid = function(n_rows = 100, n_cols = 50) {
+simulated_grid = function(n_rows = 100, n_cols = 100) {
 	coords = matrix(1, nrow = n_rows, ncol = n_cols) %>%
 		as.data.frame() %>%
 		mutate(X = row_number()) %>%
@@ -29,12 +29,15 @@ simulated_grid = function(n_rows = 100, n_cols = 50) {
 		dplyr::select(tissue, row, col, imagerow, imagecol)
 }
 
-apply_spatial_perturbation = function(sim, perturbation = 'circle') {
+apply_spatial_perturbation = function(
+	sim, perturbation = 'circle',  
+	circle_radius = 100, # only for circle
+	circle_thickness = 40 # only for circle
+	) {
 	if (perturbation == 'circle') {
 		start_x = 254
 		start_y = 180
-		circle_thickness = 40
-		r = 100
+		r = circle_radius
 		r2 = r - circle_thickness
 		sim %<>%
 			mutate(label = ifelse(
