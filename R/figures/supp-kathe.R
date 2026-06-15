@@ -14,14 +14,14 @@ library(cetcolor)
 source('R/theme.R')
 
 # Supp Fig 6a marker genes 
-sc = readRDS('data/published_data/seurat/Kathe2022.rds')
+sc = readRDS('data/real_data/seurat/Kathe2022.rds')
 meta = sc@meta.data %>%
     mutate(
         delta_x = ori_x - x,
         x = ori_x
     )
 
-lamina_dat = readRDS('data/published_data/raw_data/Kathe2022/medres.rds') %>%
+lamina_dat = readRDS('data/real_data/raw_data/Kathe2022/medres.rds') %>%
     dplyr::rename(barcode = barcodes) %>%
     mutate(
         barcode = gsub('-', '_', barcode)
@@ -86,15 +86,21 @@ fig6a = meta %>%
           ) 
     # guides(colour = guide_legend(override.aes = list(size=2)))
 # fig6a
-ggsave('fig/Efig7/lamina.pdf', fig6a, width=7, height = 8, units='cm')
+ggsave('fig/EFig10/lamina.pdf', fig6a, width=7, height = 8, units='cm')
 
-ves_res = readRDS('data/published_data/vespucci/Kathe2022-seed=42-nsub=10.rds')
-spatial_auc_res = ves_res$spatial_auc_result$aucs
+ves_res0 = readRDS('data/real_data/vespucci/Kathe2022-seed=42-nsub=10.rds')
+ves_de_res0 = readRDS('data/real_data/DE_summaries/vespucci/Kathe2022-seed=42-nsub=10-de=nebula_nbgmm.rds') %>%
+    arrange(comparison, p_val, -abs(logFC))
 
 comparison = 'EES_REHAB-SCI'
 
+ves_res = ves_res0[[comparison]]$aucs
+ves_de_res = ves_de_res0 %>%
+    filter(comparison == !!comparison)
+
+# Supp Fig 6b - AUC
 dat0 = meta %>%
-    left_join(spatial_auc_res) %>%
+    left_join(ves_res) %>%
     filter(!is.na(auc))
 
 fit = loess(auc ~ x * y, data = dat0, span = 0.02, degree = 1)
@@ -105,6 +111,8 @@ brks = c(range[1] + 0.1 * diff(range),
          range[2] - 0.1 * diff(range))
 labels = format(range, digits = 2)
 
+# new_color_pal = nr_heat_red_spatial
+# new_color_pal = auc_pal = pals::kovesi.linear_kryw_5_100_c67(100) %>% rev %>% tail(-5)
 new_color_pal = cet_pal(100, name = 'l19') %>% rev()
 
 fig6b = dat0 %>%
@@ -139,12 +147,18 @@ fig6b = dat0 %>%
           legend.key.height = unit(0.18, 'lines'),
           plot.title = element_text(size = 5))
 # p1
-ggsave('fig/Efig7/AUC.pdf', fig6b, width=6, height=7, units='cm')
+ggsave('fig/EFig10/AUC.pdf', fig6b, width=6, height=7, units='cm')
 
+normalize_data = T
 expr = GetAssayData(sc, slot='counts')
 colnames(expr) = gsub('-', '_', colnames(expr))
 
-expr %<>% NormalizeData()
+if (normalize_data) {
+    expr %<>% NormalizeData()
+    norm_suffix = '-norm'
+} else {
+    norm_suffix = '-raw'    
+}
 
 dat0 = meta %>% dplyr::select(barcode, x, y, label)
 genes_to_plot = c(
@@ -231,10 +245,11 @@ for (i in 1:length(genes_to_plot)) {
     expr_plots[[length(expr_plots)+1]] = expr_plot
 }
 fig6c = wrap_plots(expr_plots, nrow=2)
-ggsave(paste0('fig/Efig7/genes.pdf'), fig6c, width=18, height=6, units='cm')
+# ggsave(paste0('fig/figures/supp_fig6/supp_fig6c', norm_suffix, '.pdf'), fig6c, width=9, height=4, units='cm')
+ggsave(paste0('fig/EFig10/genes.pdf'), fig6c, width=18, height=6, units='cm')
 
 ## # Supp Fig 4c - GO
-sc = readRDS('data/published_data/seurat_GO/Kathe2022.rds')
+sc = readRDS('data/real_data/seurat_GO/DE/Kathe2022.rds')[['EES_REHAB-SCI']]
 meta = sc@meta.data %>%
     mutate(
         x = ori_x
@@ -250,6 +265,7 @@ genes_to_plot = c(
     'NEUROPEPTIDE HORMONE ACTIVITY',
     'GLUTAMATE DECARBOXYLASE ACTIVITY',
     'SYNCHRONOUS NEUROTRANSMITTER SECRETION',
+    # 'C-FIBER',
     'RESPIRATORY CHAIN COMPLEX IV',
     'SENSORY PERCEPTION',
     'FAST, CALCIUM ION-DEPENDENT EXOCYTOSIS OF NEUROTRANSMITTER'
@@ -331,29 +347,33 @@ for (i in 1:length(genes_to_plot)) {
     expr_plots[[length(expr_plots)+1]] = expr_plot
 }
 fig6d = wrap_plots(expr_plots, nrow=2)
-ggsave('fig/Efig7/GO.pdf', fig6d, width=18, height=6, units='cm')
+ggsave('fig/EFig10/GO.pdf', fig6d, width=18, height=6, units='cm')
 
 # Supp Fig 6e
 source('R/theme.R')
-dat0 = ves_res$$de_feature_result
+dat0 = readRDS('data/real_data/DE_summaries/vespucci/Kathe2022-seed=42-nsub=10-de=nebula_nbgmm.rds')
 min_pval = min(dat0$p_val[dat0$p_val > 0])
 dat0$p_val = vapply(dat0$p_val, function(x){max(min_pval, x)}, as.numeric(1))
 dat0 %<>%
-    mutate(up_reg = effect_size > 0) %>%
+    mutate(up_reg = logFC > 0) %>%
     group_by(up_reg) %>%
-    arrange(p_val, -abs effect_size)) %>%
+    arrange(p_val, -abs(logFC)) %>%
     mutate(
         log_p_val = -log10(p_val)
     ) %>%
     slice(1:15)
 
+# color_pal = colorRampPalette(nr_heat_red_spatial)(30)
+# brks = range(dat0$log_p_val)
+# labels = round(brks, 1)
+
 dat0 %<>% 
-    arrange( effect_size)
+    arrange(-logFC)
 dat0$gene = factor(dat0$gene, levels=rev(as.character(dat0$gene)))
 
 fig6e = dat0 %>%
-    ggplot(aes(x = gene, y = effect_size)) +
-    # facet_wrap(sign effect_size) ~ ., ncol = 1, scales = 'free') +
+    ggplot(aes(x = gene, y = logFC)) +
+    # facet_wrap(sign(logFC) ~ ., ncol = 1, scales = 'free') +
     geom_hline(aes(yintercept = 0), size = 0.4, color = 'grey88') +
     geom_segment(aes(xend = gene, yend = 0), color = 'grey88') +
     geom_point(shape = 21, stroke = 0.2, size = 0.9, color = 'black', 
@@ -375,21 +395,22 @@ fig6e = dat0 %>%
         legend.text = element_text(size = 5),
         legend.title = element_text(size = 5),
     )
-fig6e
-ggsave('fig/Efig7/lollipop-genes.pdf', fig6e, width=8, height=8, units='cm')
+    fig6e
+# ggsave('fig/figures/Supp_fig6/supp_fig6e-pval.pdf', fig6e, width=8, height=8, units='cm')
+ggsave('fig/EFig10/lollipop-genes.pdf', fig6e, width=8, height=8, units='cm')
 
 
 # Supp Fig 6f
 source('R/theme.R')
-dat0 = readRDS('data/published_data/vespucci_GO/Kathe2022-seed=42-nsub=10.rds')$de_feature_result
+dat0 = readRDS('data/real_data/DE_summaries/vespucci_GO/Kathe2022-seed=42-nsub=10-de=glm.rds')
 dat0 %<>%
     filter(!is.na(p_val))
 min_pval = min(dat0$p_val[dat0$p_val > 0])
 dat0$p_val = vapply(dat0$p_val, function(x){max(min_pval, x)}, as.numeric(1))
 dat0 %<>%
-    mutate(up_reg = effect_size > 0) %>%
+    mutate(up_reg = logFC > 0) %>%
     group_by(up_reg) %>%
-    arrange(p_val, -abs effect_size)) %>%
+    arrange(p_val, -abs(logFC)) %>%
     mutate(
         log_p_val = -log10(p_val)
     ) %>%
@@ -400,14 +421,18 @@ go_df = readRDS('data/metadata/go_names.rds') %>%
 dat0 %<>% left_join(
     go_df, by='gene'
 ) %>%
-    arrange(p_val, -abs effect_size))
+    arrange(p_val, -abs(logFC))
+
+# color_pal = colorRampPalette(nr_heat_red_spatial)(30)
+# brks = range(dat0$log_p_val)
+# labels = round(brks, 1)
 
 dat0 %<>% 
-    arrange( effect_size)
+    arrange(-logFC)
 dat0$go_name = factor(dat0$go_name, levels=rev(as.character(dat0$go_name)))
 
 fig6f= dat0 %>%
-    ggplot(aes(x = go_name, y = effect_size, color=log_p_val, fill=log_p_val)) +
+    ggplot(aes(x = go_name, y = logFC, color=log_p_val, fill=log_p_val)) +
     geom_hline(aes(yintercept = 0), linetype = "dotted", size = 0.3, color='grey80') +
     geom_segment(aes(xend = go_name, yend = 0), color='grey80', alpha=0.5) +
     geom_point(shape = 21, stroke = 0.2, size = 0.8, color = 'black', fill='grey80') +
@@ -437,4 +462,4 @@ fig6f= dat0 %>%
         legend.title = element_text(size = 5),
     )
 fig6f
-ggsave('fig/Efig7/lollipop-GO.pdf', fig6f, width=10, height=8, units='cm')
+ggsave('fig/EFig10/lollipop-GO.pdf', fig6f, width=10, height=8, units='cm')

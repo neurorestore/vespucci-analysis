@@ -5,11 +5,10 @@ library(Matrix)
 library(ggplot2)
 library(sparseMatrixStats)
 
-# setwd('C:/Users/teo/Documents/EPFL/projects/vespucci/')
-setwd('~/git/vespucci/')
+setwd('~/git/vespucci-analysis/')
 source('R/theme.R')
 
-ves_de_summ = readRDS('/work/upcourtine/vespucci/rejected_review/find_usable_genes/vespucci_de_genes_summary.rds') %>% mutate(comparison = gsub('regen_final_', '', dataset)) %>%
+ves_de_summ = readRDS('data/real_data/DE_summaries/vespucci_de_genes_summary.rds') %>% mutate(comparison = gsub('regen_final_', '', dataset)) %>%
     type_convert() %>%
     mutate(
         de_method_clean = case_when(
@@ -34,15 +33,15 @@ ves_de_summ = readRDS('/work/upcourtine/vespucci/rejected_review/find_usable_gen
             de_method == 'meringue' ~ 'MERINGUE',
             # de_method == 'somde' ~ 'SOMDE',
             de_method == 'spagft' ~ 'SpaGFT',
-            de_method == 'spanve' ~ 'Spanve'
+            de_method == 'spanve' ~ 'Spanve',
+            de_method == 'rv' ~ 'RV'
         )
     ) %>% 
     filter(!is.na(de_method_clean))
 
 tmp_ves_de_summ = ves_de_summ %>% filter(comparison == 'young_old')
-de_res = readRDS('/work/upcourtine/vespucci/real_data/DE_summaries/vespucci/regen_final_young_old-seed=42-nsub=10-de=nebula_nbgmm.rds') %>%
-    mutate(pval_rank = rank(p_val_adj, ties='first')) %>% filter(gene %in% tmp_ves_de_summ$gene)
-sc = readRDS('/work/upcourtine/vespucci/real_data/seurat/regen_final_young_old.rds')
+de_res = readRDS('data/real_data/DE_summaries/vespucci/regen_final_young_old-seed=42-nsub=10-de=nebula_nbgmm.rds') %>% mutate(pval_rank = rank(p_val_adj, ties='first')) %>% filter(gene %in% tmp_ves_de_summ$gene)
+sc = readRDS('data/real_data/seurat/regen_final_young_old.rds')
 meta = sc@meta.data %>% mutate(label = factor(str_to_title(label), levels=c('Old', 'Young')))
 expr = GetAssayData(sc, slot='counts') %>% NormalizeData()
 
@@ -104,7 +103,7 @@ for (gene in selected_genes) {
     plot_list[[length(plot_list)+1]] = p1
 }
 p_out = wrap_plots(plot_list,ncol=3)
-ggsave('fig/final/EFig16/chosen_gene_2d_plots.pdf', p_out, width=12, height=4, units='cm')
+ggsave('fig/Fig5/chosen_gene_2d_plots.pdf', p_out, width=12, height=4, units='cm')
 
 plot_list = list()
 for (gene in selected_genes) {
@@ -145,27 +144,4 @@ for (gene in selected_genes) {
 }
 
 p_out = wrap_plots(plot_list, nrow=2)
-ggsave('fig/final/EFig16/chosen_gene_rank.pdf', p_out, width=18, height=7, units='cm')
-
-
-# p2 = tmp_ves_de_summ0 %>%
-#     mutate(gene_rank = ifelse(gene_rank > 1000, 1000, gene_rank)) %>%
-#     ggplot(aes(x = de_method_clean, y = gene_rank, color=de_method, fill=de_method)) +
-#     geom_hline(aes(yintercept = 0), size = 0.4, color = 'grey88') +
-#     geom_segment(aes(xend = de_method_clean, yend = 0)) +
-#     geom_point(shape = 21, stroke = 0.2, size = 0.9) +
-#     # scale_y_continuous(expression(paste(log[2], 'rank'))) +
-#     scale_y_continuous('Gene rank') +
-#     scale_fill_manual(values=pal, na.value='grey80') +
-#     scale_color_manual(values=pal, na.value='grey80') +
-#     # boxed_theme() +
-#     clean_theme() +
-#     coord_flip() +
-#     theme(
-#         # strip.text = element_blank(),
-#         # aspect.ratio = 0.3,
-#         axis.text.x = element_text(angle=45, hjust=1),
-#         # axis.title.x = element_blank(),
-#         axis.title.y = element_blank(),
-#         legend.position = 'none'
-#     )
+ggsave('fig/Fig5/chosen_gene_rank.pdf', p_out, width=18, height=7, units='cm')

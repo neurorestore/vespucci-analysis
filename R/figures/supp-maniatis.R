@@ -1,4 +1,4 @@
-setwd('~/git/vespucci-analysis')
+setwd('~/git/vespucci-analysis/')
 library(tidyverse)
 library(magrittr)
 library(Seurat)
@@ -6,7 +6,6 @@ library(Matrix)
 library(lawstat)
 library(nparcomp)
 library(ontologyIndex)
-library(cetcolor)
 source('R/theme.R')
 
 ###############################################################################-
@@ -14,17 +13,23 @@ source('R/theme.R')
 ###############################################################################-
 
 # read dataset
-sc = readRDS('data/published_data/seurat/Maniatis2019.rds')
+sc = readRDS('data/real_data/seurat/Maniatis2019_subset.rds')
 meta = sc@meta.data %>%
   mutate(
     x = ori_x
   )
 
-ves_res = readRDS('data/published_data/vespucci/Maniatis2019-seed=42-nsub=10.rds')
-spatial_auc_res = ves_res$spatial_auc_result$aucs
+ves_res0 = readRDS('data/real_data/vespucci/Maniatis2019-seed=42-nsub=10.rds')
+ves_de_res0 = readRDS('data/real_data/DE_summaries/vespucci/Maniatis2019-seed=42-nsub=10-de=nebula_nbgmm.rds') %>%
+  arrange(comparison, p_val, -abs(logFC))
+
+comparison = 'WT-SOD|p100'
+ves_res = ves_res0[[comparison]]$aucs
+ves_de_res = ves_de_res0 %>%
+  filter(comparison == !!comparison)
 
 dat0 = meta %>%
-  left_join(spatial_auc_res) %>%
+  left_join(ves_res) %>%
   filter(!is.na(auc))
 
 fit = loess(auc ~ x * y, data = dat0, span = 0.02, degree = 1)
@@ -35,9 +40,15 @@ brks = c(range[1] + 0.1 * diff(range),
          range[2] - 0.1 * diff(range))
 labels = format(range, digits = 2)
 
+library(cetcolor)
+auc_pal = pals::kovesi.linear_kryw_5_100_c67(100) %>% rev %>% tail(-5)
+auc_pal = nr_heat_red_spatial
+auc_pal = nr_heat_red_no_white
 auc_pal = cet_pal(100, name = 'l19') %>% rev()
-
+# auc_pal = cet_pal(100, name = 'l18') # %>% rev()
 p1 = dat0 %>%
+  # arrange(auc_fit) %>%
+  # mutate(auc_fit = winsorize(auc_fit, c(0.55, NA))) %>% 
   ggplot(aes(x = x, y = y, fill = auc_fit, color = auc_fit)) +
   ggrastr::rasterise(
     geom_point(size = 0.4, shape = 21, stroke = 0), dpi = 300
@@ -69,7 +80,7 @@ p1 = dat0 %>%
         panel.background = element_rect(fill = 'grey96'),
         plot.title = element_text(size = 5))
 p1
-ggsave("fig/EFig6/AUC.pdf", p1, width = 5, height = 5, units = 'cm',
+ggsave("fig/EFig9/AUC.pdf", p1, width = 5, height = 5, units = 'cm',
        useDingbats = FALSE)
 
 ###############################################################################-
@@ -82,10 +93,16 @@ meta = sc@meta.data %>%
     label = ifelse(grepl('WT', label_ori), 'WT', 'SOD'),
     label = factor(label, levels = c('WT', 'SOD'))
   )
+normalize_data = TRUE
 expr = GetAssayData(sc, slot = 'counts')
 colnames(expr) = gsub('-', '_', colnames(expr))
 
-expr %<>% NormalizeData()
+if (normalize_data) {
+  expr %<>% NormalizeData()
+  norm_suffix = '-norm'
+} else {
+  norm_suffix = '-raw'    
+}
 
 # extract coordinates
 dat0 = meta %>% dplyr::select(barcode, x, y, label)
@@ -99,6 +116,7 @@ genes_to_plot = c(
   'MT1',
   'CST3'
 )
+stopifnot(all(str_to_title(genes_to_plot) %in% rownames(expr)))
 
 # iterate through genes
 expr_plots = list()
@@ -173,7 +191,7 @@ for (idx in seq_along(genes_to_plot)) {
   expr_plots[[idx]] = p
 }
 p1 = wrap_plots(expr_plots, ncol = 2)
-ggsave('fig/EFig6/genes.pdf', p1, width = 10, height = 8,
+ggsave('fig/EFig9/genes.pdf', p1, width = 10, height = 8,
        units = 'cm', useDingbats = FALSE)
 
 ###############################################################################-
@@ -181,7 +199,21 @@ ggsave('fig/EFig6/genes.pdf', p1, width = 10, height = 8,
 ###############################################################################-
 
 # load GO
-sc = readRDS('data/published_data/seurat_GO/Maniatis2019.rds')
+go = get_ontology("data/GO/go.obo")
+
+# read GO sub-matrix
+# mat = readRDS('data/real_data/seurat_GO/Maniatis2019_subset_GO.rds')
+mat = readRDS('data/real_data/seurat_GO/DE/Maniatis2019.rds')[[1]]
+mat = GetAssayData(mat, slot='count')
+meta = data.frame(barcode = colnames(mat))
+# merge in coordinates from single-cell object
+coords = sc@meta.data %>% 
+  dplyr::select(barcode, label_ori, ori_x, y) %>% 
+  mutate(x = ori_x,
+         label = ifelse(grepl('WT', label_ori), 'WT', 'SOD'),
+         label = factor(label, levels = c('WT', 'SOD')))
+meta %<>% left_join(coords, by = 'barcode')
+
 go_df = readRDS('data/metadata/go_names.rds')
 genes_to_plot = c(
     'NEUROFILAMENT BUNDLE ASSEMBLY',
@@ -219,6 +251,8 @@ for (gene in genes_to_plot) {
   pal = nr_heat_blue_no_white %>% tail(-5)
   pal = nr_heat_blue_spatial
   p = plot_df %>%
+    # mutate(label = ifelse(label == 'd1', 'Day 3', 'Day 7')) %>%
+    # arrange(-expr) %>%
     ggplot(aes(x = x, y = y, fill = expr)) +
     rasterise(geom_point(size = 0.4,
                          shape = 21, stroke = 0, alpha = 1), dpi = 600) +
@@ -256,7 +290,7 @@ for (gene in genes_to_plot) {
   go_plots[[length(go_plots)+1]] = p
 }
 p2 = wrap_plots(go_plots, ncol = 2)
-ggsave('fig/EFig6/GO-modules.pdf', p2, width = 10, height = 5.5,
+ggsave('fig/EFig9/GO-modules.pdf', p2, width = 10, height = 5.5,
        units = 'cm', useDingbats = FALSE)
 
 ###############################################################################-
@@ -264,24 +298,24 @@ ggsave('fig/EFig6/GO-modules.pdf', p2, width = 10, height = 5.5,
 ###############################################################################-
 
 # load results
-dat0 = ves_res$de_feature_result
+dat0 = readRDS('data/real_data/DE_summaries/vespucci/Maniatis2019-seed=42-nsub=10-de=nebula_nbgmm.rds')
 min_pval = min(dat0$p_val[dat0$p_val > 0])
 dat0$p_val = vapply(dat0$p_val, function(x){max(min_pval, x)}, as.numeric(1))
 dat0 %<>%
-  mutate(up_reg = effect_size > 0) %>%
+  mutate(up_reg = logFC > 0) %>%
   group_by(up_reg) %>%
-  arrange(p_val, -abs(effect_size)) %>%
+  arrange(p_val, -abs(logFC)) %>%
   mutate(
     log_p_val = -log10(p_val)
   ) %>%
   slice(1:15)
 dat0 %<>% 
-  arrange(-effect_size)
+  arrange(-logFC)
 dat0$gene = factor(dat0$gene, levels=rev(as.character(dat0$gene)))
 
 p3 = dat0 %>%
-  ggplot(aes(x = gene, y = effect_size)) +
-  # facet_wrap(sign(effect_size) ~ ., ncol = 1, scales = 'free') +
+  ggplot(aes(x = gene, y = logFC)) +
+  # facet_wrap(sign(logFC) ~ ., ncol = 1, scales = 'free') +
   geom_hline(aes(yintercept = 0), size = 0.4, color = 'grey88') +
   geom_segment(aes(xend = gene, yend = 0), color = 'grey88') +
   geom_point(shape = 21, stroke = 0.2, size = 0.9, color = 'black', 
@@ -304,7 +338,7 @@ p3 = dat0 %>%
     legend.title = element_text(size = 5),
   )
 p3
-ggsave('fig/EFig6/lollipop-genes.pdf', p3, width = 8, height = 8, 
+ggsave('fig/EFig9/lollipop-genes.pdf', p3, width = 8, height = 8, 
        units = 'cm', useDingbats = FALSE)
 
 ###############################################################################-
@@ -312,16 +346,17 @@ ggsave('fig/EFig6/lollipop-genes.pdf', p3, width = 8, height = 8,
 ###############################################################################-
 
 # load GO
+go = get_ontology("data/GO/go.obo")
 
 # load GLM results
-dat0 = readRDS('data/published_data/vespucci_GO/Maniatis2019-seed=42-nsub=10.rds')$de_feature_result %>% 
+dat0 = readRDS('data/real_data/DE_summaries/vespucci_GO/Maniatis2019-seed=42-nsub=10-de=glm.rds') %>% 
   filter(!is.na(p_val))
 min_pval = min(dat0$p_val[dat0$p_val > 0])
 dat0$p_val = vapply(dat0$p_val, function(x){max(min_pval, x)}, as.numeric(1))
 dat0 %<>%
-  mutate(up_reg = effect_size > 0) %>%
+  mutate(up_reg = logFC > 0) %>%
   group_by(up_reg) %>%
-  arrange(p_val, -abs(effect_size)) %>%
+  arrange(p_val, -abs(logFC)) %>%
   mutate(
     log_p_val = -log10(p_val)
   ) %>%
@@ -332,12 +367,13 @@ dat0 %<>%
   mutate(gene = chartr('-', ':', gene)) %>% 
   mutate(descr = go$name[gene]) 
 dat0 %<>% 
-  arrange(-effect_size)
+  arrange(-logFC)
 dat0$descr = factor(dat0$descr, levels=rev(as.character(dat0$descr)))
 
 # plot
 p4 = dat0 %>%
-  ggplot(aes(x = descr, y = effect_size)) +
+  ggplot(aes(x = descr, y = logFC)) +
+  # facet_wrap(sign(logFC) ~ ., ncol = 1, scales = 'free') +
   geom_hline(aes(yintercept = 0), size = 0.4, color = 'grey88') +
   geom_segment(aes(xend = descr, yend = 0), color = 'grey88') +
   geom_point(shape = 21, stroke = 0.2, size = 0.9, color = 'black', 
@@ -360,5 +396,5 @@ p4 = dat0 %>%
     legend.title = element_text(size = 5),
   )
 p4
-ggsave('fig/EFig6/lollipop-GO.pdf', p4, width = 18, height = 8, 
+ggsave('fig/EFig9/lollipop-GO.pdf', p4, width = 18, height = 8, 
        units = 'cm', useDingbats = FALSE)

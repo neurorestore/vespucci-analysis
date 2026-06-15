@@ -6,17 +6,16 @@ library(ggplot2)
 library(ggpubr)
 
 # setwd('C:/Users/teo/Documents/EPFL/projects/vespucci/')
-setwd('~/git/vespucci/')
+setwd('~/git/vespucci-analysis/')
 source('R/theme.R')
 
 # comparison = 'young_old'
 comparisons = c('young_old', 'treated_old')
 for (comparison in comparisons) {
     # sc = readRDS(paste0('data/real_data/seurat/regen_final_', comparison, '.rds'))
-    sc = readRDS(paste0('/work/upcourtine/vespucci/real_data/seurat/regen_final_', comparison, '.rds'))
+    sc = readRDS(paste0('data/real_data/seurat/regen_final_', comparison, '.rds'))
     meta = sc@meta.data %>% mutate(barcode = gsub('-','_',barcode))
-    # ves_res = readRDS(paste0('data/rejected_review/vespucci/regen_final_', comparison, '-seed=42-with_feature_importance.rds'))[[1]]
-    ves_res = readRDS(paste0('/work/upcourtine/vespucci/rejected_review/vespucci/regen_final_', comparison, '-seed=42-with_feature_importance.rds'))[[1]]
+    ves_res = readRDS(paste0('data/real_data/vespucci/regen_final_', comparison, '-seed=42-with_feature_importance.rds'))[[1]]
     dat = ves_res$spatial_auc_result$feature_importance
     barcodes_with_auc = dat %>% pull(barcode) %>% unique()
     
@@ -120,8 +119,7 @@ for (comparison in comparisons) {
     p4
     
     # now against default augur feature importance
-    # augur_res = readRDS(paste0('data/rejected_review/regen/augur/regen_final_', comparison, '-augur_res.rds'))
-    augur_res = readRDS(paste0('/work/upcourtine/vespucci/rejected_review/regen/augur/regen_final_', comparison, '-augur_res.rds'))
+    augur_res = readRDS(paste0('data/real_data/regen/augur/regen_final_', comparison, '-augur_res.rds'))
     augur_importance = augur_res$feature_importance %>%
         group_by(gene) %>%
         summarise(augur_importance = mean(importance)) %>% 
@@ -194,8 +192,7 @@ for (comparison in comparisons) {
     p7
     
     # finally aggregate classifer
-    # aggregate_classifer_files = list.files('data/rejected_review/regen/aggregate_classifier/', full.names=T, pattern=comparison)
-    aggregate_classifer_files = list.files('/work/upcourtine/vespucci/rejected_review/regen/aggregate_classifier/', full.names=T, pattern=comparison)
+    aggregate_classifer_files = list.files('data/real_data/regen/aggregate_classifier/', full.names=T, pattern=comparison)
     agg_importance = map_df(aggregate_classifer_files, function(x){
         readRDS(x)$rf$importance %>% data.frame() %>% set_colnames('agg_importance') %>% rownames_to_column('gene')
     })
@@ -274,5 +271,5 @@ for (comparison in comparisons) {
         nrow = 3
     )
     # out_p
-    ggsave(paste0('fig/final/EFig14/', comparison, '-regions_cor_plot.pdf'), out_p, width=9, height=9, units='cm')
+    ggsave(paste0('fig/EFig16/', comparison, '-regions_cor_plot.pdf'), out_p, width=9, height=9, units='cm')
 }

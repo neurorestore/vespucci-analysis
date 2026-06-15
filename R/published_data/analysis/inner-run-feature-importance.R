@@ -1,4 +1,4 @@
-setwd("~/git/vespucci")
+setwd("~/git/vespucci-analysis/")
 options(stringsAsFactors = FALSE)
 library(argparse)
 library(Seurat)

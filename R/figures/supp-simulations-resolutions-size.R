@@ -9,15 +9,13 @@ library(cetcolor)
 library(ggpubr)
 
 # setwd('C:/Users/teo/Documents/EPFL/projects/vespucci/')
-setwd('~/git/vespucci/')
+setwd('~/git/vespucci-analysis/')
 source('R/theme.R')
 source('R/functions/utils.R')
 
 # check different resolution
-# ves_files = c('data/simulations/vespucci/input=circle_res50_50-seed=0-ves_seed=42-max_cells=100.rds','data/simulations/vespucci/input=circle_res200_200-seed=0-ves_seed=42-max_cells=100.rds')
-ves_files = c('/work/upcourtine/vespucci/simulations/vespucci/input=circle_res50_50-seed=0-ves_seed=42-max_cells=100.rds','/work/upcourtine/vespucci/simulations/vespucci/input=circle_res200_200-seed=0-ves_seed=42-max_cells=100.rds')
-# meta_dir = 'data/simulations/objects_meta/'
-meta_dir = '/work/upcourtine/vespucci/simulations/objects_meta/'
+ves_files = c('data/simulations/vespucci/input=circle_res50_50-seed=0-ves_seed=42-max_cells=100.rds','data/simulations/vespucci/input=circle_res200_200-seed=0-ves_seed=42-max_cells=100.rds')
+meta_dir = 'data/simulations/objects_meta/'
 plot_list = list()
 for (ves_file in ves_files) {
     ves_res = readRDS(ves_file)
@@ -123,7 +121,7 @@ for (ves_file in ves_files) {
     plot_list[[length(plot_list)+1]] = plot_grid(p1_1, p1_2, nrow=2)
 }
 
-ves_de_res = readRDS('data/simulations/summaries/de_results/all_vespucci_de_auroc_summary_new.rds') %>% 
+ves_de_res = readRDS('data/simulations/summaries/de_results/all_vespucci_de_auroc_summary.rds') %>% 
     filter(input %in% c('circle', 'circle_res50_50', 'circle_res200_200'), max_cells == 100, ves_seed == 42) %>% 
     dplyr::select(input, seed, auprc_integral) %>% 
     mutate(de_method = 'vespucci', resolution = factor(case_when(
@@ -166,92 +164,7 @@ p2 = ves_de_res %>%
 out_p = plot_grid(wrap_plots(plot_list, nrow=1), p2, rel_widths = c(2,1))
 ggsave('fig/final/EFig13/different_resolutions_setup.pdf', out_p, width=8, height=6, units='cm')
 
-# ves_files = list.files('data/simulations/vespucci/', full.names=T)
-# ves_files = list.files('/work/upcourtine/vespucci/simulations/vespucci/', full.names=T, pattern='.rds')
-# ves_files = ves_files[grepl('seed=0', ves_files) & (grepl('rad', ves_files) | grepl('thick', ves_files))]
-# ves_files_df = map_df(ves_files, function(ves_file){data.frame(input_file=ves_file, input_type=gsub('.*circle_', '', gsub('-seed.*', '', basename(ves_file))))}) %>% mutate(
-#     rad = as.integer(gsub('_.*', '', gsub('rad', '', input_type))),
-#     rad = ifelse(is.na(rad), 100, rad),
-#     thick = as.integer(gsub('.*_', '', gsub('thick', '', input_type))),
-#     thick = ifelse(is.na(thick), 40, thick)
-# ) %>% arrange(rad, thick)
-# meta_dir = '/work/upcourtine/vespucci/simulations/objects_meta/'
-# plot_list = list()
-# for (i in 1:nrow(ves_files_df)) {
-#     tmp_row = ves_files_df[i,]
-#     ves_file = tmp_row$input_file
-#     ves_res = readRDS(ves_file)
-#     meta_file = gsub('-ves_seed.*', '.rds', basename(ves_file))
-#     input = gsub('input=', '', gsub('-seed=.*', '', meta_file))
-#     meta_list = readRDS(paste0(meta_dir, meta_file))
-#     truth_pal = pals::kovesi.linear_blue_95_50_c20(100)
-#     brks = c(1, 2)
-#     labels = c('min', 'max')
-#     meta = meta_list$meta
-#     p3_1 = meta %>%
-#         mutate(
-#             label_sim = ifelse(label_sim == 'label1', 'background', label_sim),
-#             label_sim = factor(label_sim, levels=c('background', 'label2')),
-#             label_sim = as.integer(label_sim)
-#         ) %>%
-#         # arrange(label_sim) %>%
-#         ggplot(aes(x = y, y = x, fill = label_sim, color = label_sim)) +
-#         # ggtitle(tmp_row$perm_name) +
-#         ggtitle(tmp_row$input_type) +
-#         ggrastr::rasterise(
-#             geom_point(size = 0.3, shape = 21, stroke = 0), dpi = 300
-#         ) +
-#         scale_y_continuous(expand = c(0, 0)) +
-#         scale_x_continuous(expand = c(0, 0)) +
-#         scale_color_gradientn(colours = truth_pal, name = 'Perturbation   ',breaks = brks, labels = labels) +
-#         scale_fill_gradientn(colours = truth_pal, name = 'Perturbation   ', breaks = brks, labels = labels) +
-#         guides(
-#             fill = guide_colorbar(ticks.colour = NA, frame.colour = NA, title.position='top'),
-#             colour = guide_colorbar(ticks.colour = NA, frame.colour = NA, title.position='top')
-#         ) +
-#         coord_fixed() +
-#         boxed_theme(size_sm = 5, size_lg = 5) +
-#         # ggtitle('Perturbation Effect') +
-#         theme(axis.title.x = element_blank(), axis.title.y = element_blank(), axis.text.y = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), axis.ticks.length.x = unit(0, 'lines'), axis.ticks.length.y = unit(0, 'lines'), legend.position = 'none') + ggh4x::force_panelsizes(rows = unit(1, 'cm'), cols = unit(1.5, 'cm'))
-    
-#     aucs = ves_res$spatial_auc_result$aucs
-#     dat0 = meta %>% left_join(aucs)
-#     fit = loess(auc ~ x * y, data = dat0, span = 0.015)
-#     dat0$auc_fit = predict(fit, dat0)
-    
-#     range = range(dat0$auc_fit)
-#     brks = c(range[1] + 0.1 * diff(range), range[2] - 0.1 * diff(range))
-#     labels = format(range, digits = 2)
-#     labels = c(paste0(labels[1], ' '), paste0(' ', labels[2]))    
-#     auc_pal = cet_pal(100, name = 'l19') %>% rev()
-    
-#     p3_2 = dat0 %>%
-#         # arrange(auc_fit) %>%
-#         ggplot(aes(x = y, y = x, fill = auc_fit, color = auc_fit)) +
-#         ggrastr::rasterise(
-#             geom_point(size = 0.3, shape = 21, stroke = 0), dpi = 300
-#         ) +
-#         scale_y_continuous(expand = c(0, 0)) +
-#         scale_x_continuous(expand = c(0, 0)) +
-#         scale_fill_gradientn(colours = auc_pal, name = 'AUC   ', labels = labels,limits = range, breaks = brks) +
-#         scale_color_gradientn(colours = auc_pal, name = 'AUC   ', labels = labels, limits = range, breaks = brks) +
-#         ggtitle(tmp_row$input_type) +
-#         guides(
-#             fill = guide_colorbar(ticks.colour = NA, frame.colour = NA, title.position='top'),
-#             colour = guide_colorbar(ticks.colour = NA, frame.colour = NA, title.position='top')
-#         ) +
-#         coord_fixed() +
-#         boxed_theme(size_lg = 6, size_sm = 5) +
-#         theme(axis.title.x = element_blank(), axis.title.y = element_blank(), axis.text.y = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), axis.ticks.length.x = unit(0, 'lines'), axis.ticks.length.y = unit(0, 'lines'), legend.position = 'bottom', legend.key.width = unit(0.18, 'lines'), legend.key.height = unit(0.18, 'lines'), plot.title = element_text(size = 6)) + ggh4x::force_panelsizes(rows = unit(1, 'cm'), cols = unit(1.5, 'cm'))
-#     plot_list[[length(plot_list)+1]] = p3_1
-#     plot_list[[length(plot_list)+1]] = p3_2
-# }
-# out_p = wrap_plots(plot_list, nrow=15)
-# ggsave('fig/final/EFig13/different_circles_setup-full.pdf', out_p, width=50, height=50, units='cm')
-
-# ves_de_res = readRDS('data/simulations/summaries/de_results/all_vespucci_de_auroc_summary_new.rds') %>% 
-
-spatial_acc_res = readRDS('/work/upcourtine/vespucci/simulations/summaries/spatial_res/spatial_acc-new.rds') %>% 
+spatial_acc_res = readRDS('data/simulations/summaries/spatial_res/spatial_acc.rds') %>% 
     filter((input == 'circle' | grepl('circle_rad', input) | grepl('circle_thick', input)), type == 'AUPRC') %>% 
     dplyr::select(input, seed, val)
 
@@ -266,7 +179,7 @@ spatial_acc_res %<>%
 spatial_acc_res %<>% filter(rad <= 100 & thick <= 40, !input %in% c('circle_thick40', 'circle_rad50', 'circle_rad100_thick40'))
 
 # load number of barcodes
-meta_files = list.files('/work/upcourtine/vespucci/simulations/objects_meta/', full.names=T)
+meta_files = list.files('data/simulations/objects_meta/', full.names=T)
 meta_files_df = map_df(meta_files, convert_filename_to_params) %>% filter(is.na(sp_genes)) %>% type_convert() %>% inner_join(spatial_acc_res %>% dplyr::select(input, seed))
 perturbed_barcode_counts = map_df(1:nrow(meta_files_df), function(i){
     print(i)
@@ -287,7 +200,7 @@ perturbed_barcode_counts = map_df(1:nrow(meta_files_df), function(i){
 
 dat0 = spatial_acc_res %>% left_join(perturbed_barcode_counts)
 
-ves_de_res = readRDS('/work/upcourtine/vespucci/simulations/summaries/de_results/all_vespucci_de_auroc_summary_new.rds') %>% 
+ves_de_res = readRDS('data/simulations/summaries/de_results/all_vespucci_de_auroc_summary.rds') %>% 
     filter((input == 'circle' | grepl('circle_rad', input) | grepl('circle_thick', input)), ves_seed==42, max_cells==100) %>% 
     dplyr::select(input, seed, auprc_integral) 
 ves_de_res %<>% 
@@ -332,106 +245,11 @@ p3_2
 
 p3 = wrap_plots(p3_1, p3_2, nrow=1)
 # ggsave('fig/final/EFig13/no_of_barcodes_against_acc.pdf', p3, width=6, height=5, units='cm')
-ggsave('fig/final/EFig13/pct_of_barcodes_against_acc.pdf', p3, width=6, height=5, units='cm')
+ggsave('fig/EFig5/pct_of_barcodes_against_acc.pdf', p3, width=6, height=5, units='cm')
 
 perturbed_barcode_counts %>% filter(seed==0, input %in% c('circle', 'circle_rad15_thick25', 'circle_rad50_thick25', 'circle_rad100_thick5'))
 
-# spatial_acc_res_sum = spatial_acc_res %>% 
-#     group_by(rad, thick) %>% 
-#     summarise(
-#         mean_auprc = mean(val),
-#         median_auprc = median(val)
-#     ) %>%
-#     ungroup() %>% 
-#     mutate(
-#         rad = factor(rad, levels=sort(unique(spatial_acc_res$rad))),
-#         thick = factor(thick, levels=sort(unique(spatial_acc_res$thick)))
-#     )
-
-# spatial_acc_res_sum %<>% complete(rad, thick)
-
-# spatial_acc_res_sum %<>% mutate(val = mean_auprc)
-
-# range = round(range(spatial_acc_res_sum$val, na.rm=T), 3)
-# brks = c(range[1] + 0.1 * diff(range), range[2] - 0.1 * diff(range))
-# labels = c('min', 'max')
-
-# p3_1 = spatial_acc_res_sum %>% 
-#     ggplot(aes(x = rad, y = thick)) +
-#     geom_tile(color = 'white', aes(fill = val)) +
-#     # geom_text(data = spatial_acc_res_sum %>% filter(is.na(val)), aes(label = "X"), color = "grey60", size = 1) +
-#     ggtitle('Spatial accuracy') +
-#     scale_x_discrete('Radius of circle', expand = c(0, 0)) +
-#     scale_y_discrete('Thickness of circle', expand = c(0, 0)) +
-#     scale_fill_paletteer_c("pals::kovesi.diverging_bwr_55_98_c37",name = 'Mean\nAUPRC',breaks = brks, labels = format(range, digits = 2), na.value = 'white') +
-#     guides(fill = guide_colorbar(ticks.colour = NA, frame.colour = NA, title.position='top', title.justification = 'center')) +
-#     coord_fixed() +
-#     boxed_theme() +
-#     theme(
-#         axis.text.x = element_text(angle = 45, hjust = 1),
-#         legend.key.width = unit(0.24, 'lines'),
-#         legend.key.height = unit(0.15, 'lines'),
-#         legend.position = 'bottom',
-#         legend.justification = 'right'
-#     )
-
-# ves_de_res = readRDS('/work/upcourtine/vespucci/simulations/summaries/de_results/all_vespucci_de_auroc_summary_new.rds') %>% 
-#     filter((input == 'circle' | grepl('circle_rad', input) | grepl('circle_thick', input)), ves_seed==42, max_cells==100) %>% 
-#     dplyr::select(input, seed, auprc_integral) 
-# ves_de_res %<>% 
-#     mutate(
-#         input_type = gsub('circle_', '', input),
-#         rad = as.integer(gsub('_.*', '', gsub('rad', '', input_type))),
-#         rad = ifelse(is.na(rad), 100, rad),
-#         thick = as.integer(gsub('.*_', '', gsub('thick', '', input_type))),
-#         thick = ifelse(is.na(thick), 40, thick)
-#     ) %>% arrange(rad, thick)
-# ves_de_res %<>% filter(rad <= 100 & thick <= 40, !input %in% c('circle_thick40', 'circle_rad50', 'circle_rad100_thick40'))
-
-# ves_de_res_sum = ves_de_res %>% 
-#     group_by(rad, thick) %>% 
-#     summarise(
-#         mean_auprc = mean(auprc_integral),
-#         median_auprc = median(auprc_integral)
-#     ) %>%
-#     ungroup() %>% 
-#     mutate(
-#         rad = factor(rad, levels=sort(unique(ves_de_res$rad))),
-#         thick = factor(thick, levels=sort(unique(ves_de_res$thick)))
-#     )
-
-# ves_de_res_sum %<>% complete(rad, thick)
-# ves_de_res_sum %<>% mutate(val = mean_auprc)
-
-# range = round(range(ves_de_res_sum$val, na.rm=T), 3)
-# brks = c(range[1] + 0.1 * diff(range), range[2] - 0.1 * diff(range))
-# labels = c('min', 'max')
-
-# p3_2 = ves_de_res_sum %>% 
-#     ggplot(aes(x = rad, y = thick)) +
-#     geom_tile(color = 'white', aes(fill = val)) +
-#     # geom_text(data = spatial_acc_res_sum %>% filter(is.na(val)), aes(label = "X"), color = "grey60", size = 1) +
-#     ggtitle('DE genes detected') +
-#     scale_x_discrete('Radius of circle', expand = c(0, 0)) +
-#     scale_y_discrete('Thickness of circle', expand = c(0, 0)) +
-#     scale_fill_paletteer_c("pals::kovesi.diverging_bwr_55_98_c37",name = 'Mean\nAUPRC',breaks = brks, labels = format(range, digits = 2), na.value = 'white') +
-#     guides(fill = guide_colorbar(ticks.colour = NA, frame.colour = NA, title.position='top', title.justification = 'center')) +
-#     coord_fixed() +
-#     boxed_theme() +
-#     theme(
-#         axis.text.x = element_text(angle = 45, hjust = 1),
-#         legend.key.width = unit(0.24, 'lines'),
-#         legend.key.height = unit(0.15, 'lines'),
-#         legend.position = 'bottom',
-#         legend.justification = 'right'
-#     )
-
-# p3 = wrap_plots(p3_1, p3_2, nrow=2)
-# ggsave('fig/final/EFig13/different_radius_thickness_auprc.pdf', p3, width=6.5, height= 9.5, units='cm')
-
-# ves_files = list.files('data/simulations/vespucci/', full.names=T)
-
-ves_files = list.files('/work/upcourtine/vespucci/simulations/vespucci/', full.names=T, pattern='.rds')
+ves_files = list.files('data/simulations/vespucci/', full.names=T, pattern='.rds')
 ves_files = ves_files[grepl('seed=0', ves_files) & (grepl('rad', ves_files) | grepl('thick', ves_files) | grepl('circle-', ves_files)) & grepl('ves_seed=42-max_cells=100.rds', ves_files)]
 ves_files_df = map_df(ves_files, function(ves_file){data.frame(input_file=ves_file, input_type=gsub('input=', '', gsub('.*circle_', '', gsub('-seed.*', '', basename(ves_file)))))}) %>% mutate(
     rad = as.integer(gsub('_.*', '', gsub('rad', '', input_type))),
@@ -441,7 +259,7 @@ ves_files_df = map_df(ves_files, function(ves_file){data.frame(input_file=ves_fi
 ) %>% arrange(rad, thick)
 # ves_files_df %<>% filter(input_type %in% c('circle', 'rad5_thick5', 'rad15_thick25', 'rad25_thick40', 'rad50_thick5', 'rad50_thick25', 'rad50_thick40',  'rad100_thick25'))
 ves_files_df %<>% filter(input_type %in% c('circle', 'rad15_thick25', 'rad50_thick25', 'rad100_thick5'))
-meta_dir = '/work/upcourtine/vespucci/simulations/objects_meta/'
+meta_dir = 'data/simulations/objects_meta/'
 plot_list = list()
 for (i in 1:nrow(ves_files_df)) {
     tmp_row = ves_files_df[i,]
@@ -508,4 +326,4 @@ for (i in 1:nrow(ves_files_df)) {
     plot_list[[length(plot_list)+1]] = p3_2
 }
 out_p = wrap_plots(plot_list, nrow=2)
-ggsave('fig/final/EFig13/different_circles_setup.pdf', out_p, width=10, height=8, units='cm')
+ggsave('fig/EFig5/different_circles_setup.pdf', out_p, width=10, height=8, units='cm')

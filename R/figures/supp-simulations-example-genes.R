@@ -1,67 +1,109 @@
-setwd('~/git/vespucci')
+setwd('~/git/vespucci-analysis/')
 library(tidyverse)
 library(magrittr)
 library(Seurat)
 library(Matrix)
 library(cetcolor)
 library(patchwork)
+library(ggrastr)
 source('R/theme.R')
 
-inputs = 'circle'
+# inputs = c('circle', 'circle_overlap', 'stripes', 'flag')
+input = 'circle'
 de_methods = c(
     'vespucci',
     sort(
-        c('sparkx', 'cside', 'wilcox', 'moransi', 'heartsvg', 'scran', 'mast', 
-          'binSpect_kmeans', 'binSpect_rank', 'nnsvg' ,
-          'spacgn', 'squidpy', 'spatialDE')    
+        c('binSpect_kmeans', 'binSpect_rank', 'cside', 'dCor', 'haystack', 'heartsvg', 'mast', 'meringue', 'moransi', 'nnsvg', 'rv', 'scran', 'sparkx', 'wilcox', 'spacgn', 'spagft', 'spanve', 'spatialDE', 'spatialDE2', 'squidpy')
     )
 )
 de_method_names = data.frame(
-	de_method_name = c(
-		'sparkx',
-		'spacgn',
-		'cside',
-		'moransi',
-		'wilcox',
-		'nnsvg',
-		'spatialDE',
-		'heartsvg',
-		'squidpy_permutation',
-		'squidpy_normality',
-		'squidpy_normal_approx_permutation',
-		'scran',
-		'mast',
-		'binSpect_kmeans',
-		'binSpect_rank',
-		'vespucci'
-	),
-	x_name = c(
-		'SPARK-X',
-		'SpaGCN',
-		'C-SIDE',
-		'Moransi test',
-		'Wilcoxon rank-sum test',
-		'nnSVG',
-		'SpatialDE',
-		'HEARTSVG',
-		'Squidpy\n(permutation test)',
-		'Squidpy\n(normality assumption)',
-		'Squidpy\n(normal approximation)',
-		'scran',
-		'MAST',
-		'binSpect\n(k-means)',
-		'binSpect\n(rank)',
-		'Vespucci'
-	)
+    de_method_name = c(
+        'DE only',
+        'sparkx',
+        'spacgn',
+        'cside',
+        'moransi',
+        'wilcox',
+        'nnsvg',
+        'spatialDE',
+        'spatialDE2',
+        'heartsvg',
+        'squidpy_permutation',
+        'squidpy_normality',
+        'squidpy_normal_approx_permutation',
+        'scran',
+        'mast',
+        'binSpect_kmeans',
+        'binSpect_rank',
+        'haystack',
+        'dCor',
+        'hsic',
+        'meringue',
+        'rv',
+        'somde',
+        'spagft',
+        'spanve',
+        'magellan',
+        'vespucci'
+    ),
+    x_name = c(
+        'NBGMM',
+        'SPARK-X',
+        'SpaGCN',
+        'C-SIDE',
+        'Moransi test',
+        'Wilcoxon rank-sum test',
+        'nnSVG',
+        'SpatialDE',
+        'SpatialDE2',
+        'HEARTSVG',
+        'Squidpy (permutation test)',
+        'Squidpy (normality ass.)',
+        'Squidpy (normal approx.)',
+        'scran',
+        'MAST',
+        'binSpect (k-means)',
+        'binSpect (rank)',
+        'SingleCellHayStack',
+        'dCor',
+        'Hsic',
+        'MERINGUE',
+        'RV',
+        'SomDE',
+        'Spagft',
+        'Spanve',
+        'Magellan',
+        'Vespucci'
+    )
 )
 
-input_prefix = 'input=circle-de_prob=0.2-de_size=2-reps=3-rep_de_jitter=1-rep_depth_jitter=0.3-seed=0'
-sc = readRDS("data/simulations/objects/input=circle-de_prob=0.2-de_size=2-reps=3-rep_de_jitter=1-rep_depth_jitter=0.3-seed=0.rds")
-
+normalize_data = TRUE
+input_prefix = 'input=circle-seed=0'
+# sc_obj_filename = paste0('data/simulations/objects/',input_prefix,'.rds')
+sc_obj_filename = paste0('data/simulations/objects/',input_prefix,'.rds')
+sc = readRDS(sc_obj_filename)
 genes = sc@assays$originalexp@meta.features
 meta = sc@meta.data
 expr = GetAssayData(sc, slot = 'counts')
-    
+
+# optionally, normalize
+if (normalize_data) {
+    expr %<>% NormalizeData()
+    norm_suffix = 'norm'
+} else {
+    norm_suffix = 'raw'
+}
+
+# genes_meta = readRDS('data/simulations/objects_meta/input=circle-seed=0.rds')$gene_meta 
+genes_meta = readRDS('data/simulations/objects_meta/input=circle-seed=0.rds')$gene_meta 
+truth = genes_meta%>% 
+    dplyr::select(colnames(genes_meta)[grepl('_is_selected', colnames(genes_meta))]) %>% 
+    rowSums() %>%
+    data.frame() %>%
+    set_colnames('truth') %>%
+    mutate(truth = as.integer(truth > 0)) %>% 
+    rownames_to_column('gene')
+
 # start with Vespucci first
 for (de_method in de_methods) {
     if (de_method == first(de_methods)) {
@@ -70,11 +112,11 @@ for (de_method in de_methods) {
     }
     print(de_method)
     if (de_method != 'vespucci') {
-        if (!de_method %in% c('spacgn', 'squidpy', 'spatialDE')) {
-            data_dir = 'data/simulations/de_results/others/'
+        if (!de_method %in% c('spacgn', 'spagft', 'spanve', 'spatialDE', 'spatialDE2', 'squidpy')) {
+            data_dir = 'data/simulations/DE_summaries/others/'
             input_suffix = '.rds'
         } else {
-            data_dir = 'data/simulations/de_results/others_python/'
+            data_dir = 'data/simulations/DE_summaries/others_python/'
             input_suffix = '.csv'
         }
         de_filename = paste0(data_dir, input_prefix, '-de=', de_method, input_suffix)
@@ -85,16 +127,27 @@ for (de_method in de_methods) {
             tmp = readRDS(de_filename)
         }
     } else {
-        tmp = readRDS(paste0('data/simulations/vespucci/', input_prefix, '-ves_seed=42-max_cells=100-lo=eu_ma-de=nebula_nbgmm.rds'))$de_feature_result
+        tmp = readRDS('data/simulations/vespucci/input=circle-seed=0-ves_seed=42-max_cells=100.rds')$de_feature_result %>% dplyr::rename(gene = feature)
     }
     
     # manual fixes
     if (de_method == 'squidpy') {
         tmp %<>% mutate(gene = Gene)
+    } else if (de_method == 'markvariogram') {
+        tmp %<>% mutate(p_val = -1, p_val_adj = -1)
+    } else if (de_method == 'smash') {
+        tmp %<>% mutate(p_val = -1, p_val_adj = -1, stat = shap_value,
+                        cell_type = label)
     } else if (de_method == 'spacgn') {
         tmp %<>% mutate(gene = genes)
     } else if (de_method == 'spatialDE') {
         tmp %<>% mutate(stat = 'LLR', p_val_adj = 0)
+    } else if (de_method == 'spatialDE2'){
+        tmp %<>% mutate(stat = 'LLR', p_val_adj=0)
+    } else if (de_method == 'spagft'){
+        tmp %<>% mutate(stat = 'gft_score', p_val_adj=0)
+    } else if (de_method == 'spanve'){
+        tmp %<>% mutate(stat = 'ent', p_val_adj=0)
     }
     
     if ('type' %in% colnames(tmp)) {
@@ -107,6 +160,7 @@ for (de_method in de_methods) {
     if (!'stat' %in% colnames(tmp)) tmp %<>% mutate(stat = 0)
     if (!'cell_type' %in% colnames(tmp)) tmp %<>% mutate(cell_type = 'CellType0')
     
+    # moransi have p_vals < 0
     tmp %<>% 
         filter(!is.na(p_val))
     
@@ -119,7 +173,7 @@ for (de_method in de_methods) {
         tmp2$p_val_adj = p.adjust(tmp2$p_val, method = 'BH')
         tmp2$de_binary = tmp2$p_val_adj < 0.05
         
-        dat0 = nebula_res %>% 
+        dat0 = truth %>% 
             dplyr::select(gene, truth) %>% 
             left_join(tmp2 ,by = 'gene'
             ) %>%
@@ -178,10 +232,17 @@ for (de_method in de_methods) {
                 
                 full_range = range(plot_df$expr_fit)
                 brks = c(full_range[1] + 0.1 * diff(full_range), full_range[2] - 0.1 * diff(full_range))
+                # full_range = c(NA, quantile(plot_df$expr_fit, probs = 0.99, na.rm = TRUE))
                 labels = c('min', 'max')
                 
+                # color_pal = colorRampPalette(c("yellow", "purple"))(10)
+                # color_pal = nr_heat_blue_no_white %>% tail(-5)
+                # color_pal = nr_heat_red_no_white %>% tail(-5)
+                # color_pal = nr_heat_blue_spatial
                 color_pal = pals::kovesi.linear_blue_95_50_c20(100)
+                # color_pal = cet_pal(100, name = 'l19') %>% rev()
                 
+                # plot_df$label = gsub('Perturbation_', 'Label ', plot_df$label)
                 plot_df$label = ifelse(plot_df$label == 'Perturbation_1', 'Control', 'Treatment')
                 plot_df$de_method = de_method_names$x_name[de_method_names$de_method_name == curr_de_method]
                 
@@ -245,6 +306,7 @@ expr_plots[[length(expr_plots)]] = expr_plots[[length(expr_plots)]] +
         legend.title = element_text(size=5)
     )
 p0 = wrap_plots(expr_plots, ncol = 4)
-ggsave(paste0('fig/EFig1/circle.pdf'), p0, width = 12, height = 13, units='cm')
-
+plot_height = 13
+plot_width = 12
+ggsave(paste0('fig/EFig1/', input, '.pdf'), p0, width = plot_width, height = plot_height, units='cm')
 

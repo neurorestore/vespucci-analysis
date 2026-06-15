@@ -1,5 +1,5 @@
 # Setup some functions to clean up the simulation code
-# setwd("~/git/vespucci")
+# setwd("~/git/vespucci-analysis/")
 library(tidyverse)
 library(magrittr)
 library(Matrix)

@@ -15,7 +15,7 @@ library(ungeviz)
 source('R/theme.R')
 
 source("R/kinematics/kinematics_parsing.R")
-dat = readRDS('data/kinematics/final_data.rds')
+dat = readRDS('data/kinematics/plot_data.rds')
 meta_cols = colnames(dat)[1:4]
 
 p1_col = 'drag_duration_percentage'
@@ -63,9 +63,9 @@ p0 = plot_kinematics(kin,
 )
 p0 = p0 %>% wrap_plots(nrow = 1)
 p0
-ggsave('fig/EFig10/kinematics.pdf', p0, width = 16, height = 8, units = 'cm', useDingbats = F)
+ggsave('fig/EFig13/kinematics.pdf', p0, width = 16, height = 8, units = 'cm', useDingbats = F)
 
-sc = readRDS('data/regen/seurat/regen_final.rds')
+sc = readRDS('data/real_data/seurat/regen_final_v14.rds')
 sc@meta.data %<>%
     mutate(
         replicate = paste0(label, '_', slide)
@@ -129,6 +129,8 @@ p1a = mean_umis_per_barcode %>%
           legend.key.size = unit(0.4, 'lines'),
           plot.background = element_blank(),
           panel.background = element_blank(),
+          # axis.text.y = element_blank(),
+          # axis.ticks.y = element_blank(),
           axis.title.y = element_blank())
 p1a
 
@@ -187,7 +189,7 @@ p1c
 # combine and save together
 p1 = p1a | p1b | p1c
 p1
-ggsave("fig/EFig10/per-section-metrics.pdf", p1,
+ggsave("fig/EFig13/per-section-metrics.pdf", p1,
        width = 7, height = 3.5, units = "cm", useDingbats = FALSE)
 
 # histogram: number of genes
@@ -209,7 +211,7 @@ p2_1 = meta %>%
                hjust = 0, vjust = 1, size = 1.5, fill = NA, label.size = NA,
                label.padding = unit(0.45, 'lines'))
 p2_1
-# ggsave("fig/EFig10/n-genes-histogram.pdf", p2_1, width = 4, height = 3, units = "cm", useDingbats = FALSE)
+# ggsave("fig/EFig13/n-genes-histogram.pdf", p2_1, width = 4, height = 3, units = "cm", useDingbats = FALSE)
 # 
 # histogram: number of UMIs
 
@@ -231,7 +233,7 @@ p2_2 = meta %>%
                hjust = 0, vjust = 1, size = 1.5, fill = NA, label.size = NA,
                label.padding = unit(0.45, 'lines'))
 p2_2
-# ggsave("fig/EFig10/n-UMIs-histogram.pdf", p2_2, width = 4, height = 3, units = "cm", useDingbats = FALSE)
+# ggsave("fig/EFig13/n-UMIs-histogram.pdf", p2_2, width = 4, height = 3, units = "cm", useDingbats = FALSE)
 
 # percent mitochondrial
 median3 = round(median(meta$pct_mito),2)
@@ -252,7 +254,7 @@ p2_3 = meta %>%
                hjust = 0, vjust = 1, size = 1.5, fill = NA, label.size = NA,
                label.padding = unit(0.45, 'lines'))
 p2_3
-# ggsave("fig/EFig10/pct-mito-histogram.pdf", p2_3, width = 4, height = 3, units = "cm", useDingbats = FALSE)
+# ggsave("fig/EFig13/pct-mito-histogram.pdf", p2_3, width = 4, height = 3, units = "cm", useDingbats = FALSE)
 
 # correlation
 meta %<>% 
@@ -282,14 +284,20 @@ p2_4 = meta %>%
         legend.key.height = unit(0.15, 'lines')
         )
 # p2_4
-# ggsave("fig/EFig10/n-UMIs-vs-n-genes-density.pdf", p2_4, width = 4, height = 4.33, units = "cm", useDingbats = FALSE)
+# ggsave("fig/EFig13/n-UMIs-vs-n-genes-density.pdf", p2_4, width = 4, height = 4.33, units = "cm", useDingbats = FALSE)
 
 p2 = wrap_plots(p2_1,p2_2,p2_3,p2_4, ncol=4)
-ggsave("fig/EFig10/summary-stats.pdf", p2, width = 11, height = 3.5, units = "cm", useDingbats = FALSE)
+ggsave("fig/EFig13/summary-stats.pdf", p2, width = 11, height = 3.5, units = "cm", useDingbats = FALSE)
 
 p3 = wrap_plots(p1, p2, widths=c(7,4))
 # p3
-ggsave("fig/EFig10/top-row.pdf", p3, width = 18, height = 12, units = "cm", useDingbats = FALSE)
+ggsave("fig/EFig13/top-row.pdf", p3, width = 18, height = 12, units = "cm", useDingbats = FALSE)
+
+sc = readRDS('data/real_data/seurat/regen_final_v14.rds')
+sc@meta.data %<>%
+    mutate(
+        replicate = paste0(label, '_', slide)
+    )
 
 expr = GetAssayData(sc, slot='counts') %>% NormalizeData()
 meta = sc@meta.data %>%
@@ -307,7 +315,7 @@ go_df = readRDS('data/metadata/go_names.rds') %>%
 
 comparisons = list(
     'young-old'=list(
-        go_suffix = 'young_old',
+        go_suffix = 'young_old_v14',
         factor_lvls = c('Young', 'Old'),
         genes = c(
             'Spp1',
@@ -323,11 +331,12 @@ comparisons = list(
             'proteolysis',
             'astrocyte projection',
             'apoptotic cell clearance',
+            # 'long-term synaptic potentiation',
             'presynapse'
         )
     ),
     'treated-old'=list(
-        go_suffix = 'treated_old',
+        go_suffix = 'treated_old_v14_remove_2_D_treated',
         factor_lvls = c('Old', 'Treated'),
         genes = c(
             'Mobp',
@@ -339,11 +348,12 @@ comparisons = list(
             'apoptotic cell clearance',
             'immune response',
             'astrocyte development'
+            # 'long-term synaptic potentiation'
         )
     )
 )
 
-seurat_go_dir = 'data/regen/seurat_GO/'
+seurat_go_dir = 'data/real_data/seurat_GO/subset/'
 for (comparison in names(comparisons)) {
     genes = comparisons[[comparison]]$genes
     meta0 = meta %>%
@@ -410,6 +420,7 @@ for (comparison in names(comparisons)) {
         p1a
         plot_list[[length(plot_list)+1]] = p1a
     }
+    p1a
     
     go_sc = readRDS(paste0(seurat_go_dir, 'regen_final_', comparisons[[comparison]]$go_suffix, '.rds'))
     go_expr = GetAssayData(go_sc)
@@ -485,27 +496,31 @@ for (comparison in names(comparisons)) {
     p1 = wrap_plots(plot_list, ncol=2)
     p1
     
-    ggsave(paste0('fig/EFig10/', comparison, '-genes-gos.pdf'), p1, width = 8, height = ifelse(comparison == 'treated-old', 7, 10), units='cm')
+    ggsave(paste0('fig/EFig13/', comparison, '-genes-gos.pdf'), p1, width = 8, height = ifelse(comparison == 'treated-old', 7, 10), units='cm')
 }
 
-de_res1 = readRDS('data/regen/regen_final_treated_old-seed=42-nsub=10.rds')$de_feature_result
-de_res2 = readRDS('data/regen/regen_final_young_old-seed=42-nsub=10.rds')$de_feature_result
+de_res = readRDS('data/real_data/DE_summaries/vespucci/regen_final_treated_old_v14_remove_2_D_treated-seed=42-nsub=10-de=nebula_nbgmm.rds')
+inv_de_res = readRDS('data/real_data/DE_summaries/vespucci/regen_final_young_old_v14-seed=42-nsub=10-de=nebula_nbgmm.rds')
 
-combined_df = de_res1 %>%
+combined_df = de_res %>%
     mutate(p_val = -log(p_val)) %>%
-    dplyr::select(gene, p_val) %>%
+    dplyr::select(gene, logFC, p_val) %>%
     dplyr::rename(
+        compar1_logFC = logFC,
         compar1_pval = p_val
     ) %>%
     left_join(
-        de_res2 %>%
+        inv_de_res %>%
             mutate(p_val = -log(p_val)) %>%
-            dplyr::select(gene, p_val) %>%
+            dplyr::select(gene, logFC, p_val) %>%
             dplyr::rename(
+                compar2_logFC = logFC,
                 compar2_pval = p_val
             )
     ) %>%
     filter(
+        !is.na(compar1_logFC),
+        !is.na(compar2_logFC),
         !is.na(compar1_pval),
         !is.na(compar2_pval)
     )
@@ -513,7 +528,7 @@ compar1_quan_range = quantile(combined_df$compar1_pval, c(0.01, 0.99))
 compar2_quan_range = quantile(combined_df$compar2_pval, c(0.01, 0.99))
 
 p5 = combined_df %>%
-    ggplot(aes(x=compar1_pval, y=compar2_pval)) +
+    ggplot(aes(y=compar1_pval, x=compar2_pval)) +
     rasterise(geom_point(size = 0.2, shape = 21, stroke = 0, alpha = 1, fill='black', color='black'), dpi = 600) +
     boxed_theme() +
     xlim(compar1_quan_range) +
@@ -526,4 +541,4 @@ p5 = combined_df %>%
         aspect.ratio = 1
     )
 p5
-ggsave('fig/EFig10/p_val_cor.pdf', p5, width=4, height=3, units='cm')
+ggsave('fig/EFig13/p_val_cor.pdf', p5, width=4, height=3, units='cm')

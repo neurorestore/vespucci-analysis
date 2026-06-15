@@ -1,4 +1,4 @@
-setwd('~/git/vespucci')
+setwd('~/git/vespucci-analysis/')
 library(tidyverse)
 library(magrittr)
 library(Seurat)
@@ -9,11 +9,11 @@ source('R/theme.R')
 source('R/functions/utils.R')
 
 # just old treated
-go_res = readRDS('/work/upcourtine/vespucci/rejected_review/spatial_cluster_genes/real_data/gene_set_encrichment/regen_final_treated_old.rds')
-meta0 = readRDS('/work/upcourtine/vespucci/real_data/meta/regen_final.rds')
+go_res = readRDS('data/real_data/spatial_cluster_genes/gene_set_enrichment/regen_final_treated_old.rds')
+meta0 = readRDS('data/real_data/meta/regen_final.rds')
 
 label = 'treated'
-cluster_res = readRDS(paste0('/work/upcourtine/vespucci/rejected_review/spatial_cluster_genes/real_data/regen_final_treated_old-norm=norm-clust=kmeans-label=', label, '-seed=42-expr=module.rds'))
+cluster_res = readRDS(paste0('data/real_data/spatial_cluster_genes/regen_final_treated_old-norm=norm-clust=kmeans-label=', label, '-seed=42-expr=module.rds'))
 barcode_expr_df = cluster_res$barcode_expr_df
 genes_cluster_df = cluster_res$genes_cluster_df
 plot_list = list()
@@ -92,7 +92,7 @@ for (cluster in sort(unique(barcode_expr_df$cluster))) {
     plot_list[[length(plot_list)+1]] = wrap_plots(p1a,p1b,nrow=1,widths=c(1,1.5))
 }
 out_p = wrap_plots(plot_list, ncol=1)
-ggsave(paste0('fig/final/EFig15/regen_final_treated_old-label=', label, '.pdf'), out_p, width = 15, height = 30, units = 'cm', useDingbats = FALSE)
+ggsave(paste0('fig/EFig14/regen_final_treated_old-label=', label, '.pdf'), out_p, width = 15, height = 30, units = 'cm', useDingbats = FALSE)
 
 # first correlation between each cluster
 run_grid = go_res %>% dplyr::select(label, cluster) %>% distinct() %>% dplyr::rename(cluster1 = cluster) %>% left_join(go_res %>% dplyr::select(label, cluster) %>% distinct() %>% dplyr::rename(cluster2 = cluster), relationship = 'many-to-many') %>% filter(cluster1 != cluster2)
@@ -135,4 +135,4 @@ for (label in c('old', 'treated')) {
     plot_list[[length(plot_list)+1]] = p1
 }
 out_p = wrap_plots(plot_list, nrow=1)
-ggsave('fig/final/EFig15/gene_set_enrichment_pval_cor.pdf', out_p, width=6.5, height=6.5, units='cm')
+ggsave('fig/EFig14/gene_set_enrichment_pval_cor.pdf', out_p, width=6.5, height=6.5, units='cm')

@@ -8,12 +8,12 @@ library(cetcolor)
 # library(PRROC)
 
 # setwd('C:/Users/teo/Documents/EPFL/projects/vespucci/')
-setwd('~/git/vespucci/')
+setwd('~/git/vespucci-analysis/')
 source('R/theme.R')
 
 # test different seeds
 # dat = readRDS('data/rejected_review/different_seeds/simulations-auc-summary.rds') %>% 
-dat = readRDS('/work/upcourtine/vespucci/rejected_review/different_seeds/simulations-auc-summary.rds') %>% 
+dat = readRDS('data/rejected_review/different_seeds/simulations-auc-summary.rds') %>% 
     mutate(
         cor = pearson_cor,
         input_clean = case_when(
@@ -339,8 +339,8 @@ dat2 = map_df(1:nrow(run_grid), function(i){
     tmp_row = run_grid[i,]
     # ves_res1 = readRDS(paste0('data/simulations/vespucci/input=circle-seed=0-ves_seed=42-max_cells=',tmp_row$max_cells1,'.rds'))
     # ves_res2 = readRDS(paste0('data/simulations/vespucci/input=circle-seed=0-ves_seed=42-max_cells=',tmp_row$max_cells2,'.rds'))
-    ves_res1 = readRDS(paste0('/work/upcourtine/vespucci/simulations/vespucci/input=circle-seed=0-ves_seed=42-max_cells=',tmp_row$max_cells1,'.rds'))
-    ves_res2 = readRDS(paste0('/work/upcourtine/vespucci/simulations/vespucci/input=circle-seed=0-ves_seed=42-max_cells=',tmp_row$max_cells2,'.rds'))
+    ves_res1 = readRDS(paste0('data/simulations/vespucci/input=circle-seed=0-ves_seed=42-max_cells=',tmp_row$max_cells1,'.rds'))
+    ves_res2 = readRDS(paste0('data/simulations/vespucci/input=circle-seed=0-ves_seed=42-max_cells=',tmp_row$max_cells2,'.rds'))
     combined_auc_df = ves_res1$spatial_auc_result$aucs %>% dplyr::rename(auc1 = auc) %>% inner_join(ves_res2$spatial_auc_result$aucs %>% dplyr::rename(auc2 = auc), by='barcode')
     combined_pval_df = ves_res1$de_feature_result %>% dplyr::rename(pval_1 = p_val) %>% dplyr::select(feature, pval_1) %>% inner_join(ves_res2$de_feature_result %>% dplyr::rename(pval_2 = p_val) %>% dplyr::select(feature, pval_2), by='feature')
     combined_pval_df %<>% mutate(
@@ -380,8 +380,7 @@ p1_1 = plot_df %>%
           legend.justification = 'right')
 
 range = range(plot_df$pval_cor)
-brks = c(range[1] + 0.1 * diff(range),
-         range[2] - 0.1 * diff(range))
+brks = c(range[1] + 0.1 * diff(range), range[2] - 0.1 * diff(range))
 
 p1_2 = plot_df %>% 
     ggplot(aes(x = max_cells1, y = max_cells2)) +
@@ -592,13 +591,13 @@ run_grid = tidyr::crossing(
 dat2 = map_df(1:nrow(run_grid), function(i){
     tmp_row = run_grid[i,]
     # ves_res1 = readRDS(paste0('data/real_data/vespucci/', tmp_row$dataset, '-seed=42-nsub=10-bc=', tmp_row$max_cells1, '.rds'))[[1]]
-    ves_res1 = readRDS(paste0('/work/upcourtine/vespucci/real_data/vespucci/', tmp_row$dataset, '-seed=42-nsub=10-bc=', tmp_row$max_cells1, '.rds'))[[1]]
+    ves_res1 = readRDS(paste0('data/real_data/vespucci/', tmp_row$dataset, '-seed=42-nsub=10-bc=', tmp_row$max_cells1, '.rds'))[[1]]
     if (tmp_row$max_cells2 == 1000) {
         # ves_res2 = readRDS(paste0('data/real_data/vespucci/', tmp_row$dataset, '-seed=42-nsub=10.rds'))[[1]]
-        ves_res2 = readRDS(paste0('/work/upcourtine/vespucci//real_data/vespucci/', tmp_row$dataset, '-seed=42-nsub=10.rds'))[[1]]
+        ves_res2 = readRDS(paste0('data//real_data/vespucci/', tmp_row$dataset, '-seed=42-nsub=10.rds'))[[1]]
     } else {
         # ves_res2 = readRDS(paste0('data/real_data/vespucci/', tmp_row$dataset, '-seed=42-nsub=10-bc=', tmp_row$max_cells2, '.rds'))[[1]]
-        ves_res2 = readRDS(paste0('/work/upcourtine/vespucci//real_data/vespucci/', tmp_row$dataset, '-seed=42-nsub=10-bc=', tmp_row$max_cells2, '.rds'))[[1]]
+        ves_res2 = readRDS(paste0('data//real_data/vespucci/', tmp_row$dataset, '-seed=42-nsub=10-bc=', tmp_row$max_cells2, '.rds'))[[1]]
     }
     combined_auc_df = ves_res1$spatial_auc_result$aucs %>% dplyr::rename(auc1 = auc) %>% inner_join(ves_res2$spatial_auc_result$aucs %>% dplyr::rename(auc2 = auc), by='barcode')
     combined_pval_df = ves_res1$de_feature_result %>% dplyr::rename(pval_1 = p_val) %>% dplyr::select(feature, pval_1) %>% inner_join(ves_res2$de_feature_result %>% dplyr::rename(pval_2 = p_val) %>% dplyr::select(feature, pval_2), by='feature')

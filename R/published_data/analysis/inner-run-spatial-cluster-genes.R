@@ -1,5 +1,5 @@
 # Run Magellan on each barcode within a given real dataset
-setwd("~/git/vespucci")
+setwd("~/git/vespucci-analysis/")
 options(stringsAsFactors = F)
 library(argparse)
 

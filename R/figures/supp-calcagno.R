@@ -1,4 +1,4 @@
-setwd('~/git/vespucci')
+setwd('~/git/vespucci-analysis/')
 library(tidyverse)
 library(magrittr)
 library(Seurat)
@@ -125,7 +125,7 @@ p2 = meta %>%
     facet_wrap(~replicate, ncol = 6, scales='free')
 p0 = wrap_plots(p1,p2, nrow=2)
 # p0
-ggsave('fig/final/EFig4/rctd-registration.pdf', p0, width = 11, height = 4, units='cm')
+ggsave('fig/EFig8/rctd-registration.pdf', p0, width = 11, height = 4, units='cm')
 
 ###############################################################################-
 ## b. genes ####
@@ -233,7 +233,7 @@ for (idx in seq_along(genes_to_plot)) {
   expr_plots[[idx]] = p
 }
 p1 = wrap_plots(expr_plots, ncol = 5)
-ggsave('fig/final/EFig4/genes.pdf', p1, width = 10, height = 4.5,
+ggsave('fig/EFig8/genes.pdf', p1, width = 10, height = 4.5,
        units = 'cm', useDingbats = FALSE)
 
 ###############################################################################-
@@ -344,9 +344,9 @@ for (idx in seq_len(nrow(mat))) {
   go_plots[[length(go_plots)+1]] = p
 }
 p2 = wrap_plots(go_plots, nrow = 2)
-# ggsave('fig/final/EFig4/GO-modules.pdf', p2, width = 12, height = 3,
+# ggsave('fig/EFig8/GO-modules.pdf', p2, width = 12, height = 3,
        # units = 'cm', useDingbats = FALSE)
-ggsave('fig/final/EFig4/genes-GO-modules.pdf', p2, width = 16, height = 5,
+ggsave('fig/EFig8/genes-GO-modules.pdf', p2, width = 16, height = 5,
        units = 'cm', useDingbats = FALSE)
 
 
@@ -395,7 +395,7 @@ p3 = dat0 %>%
     legend.title = element_text(size = 5),
   )
 p3
-ggsave('fig/final/EFig4/lollipop-genes.pdf', p3, width = 8, height = 8, 
+ggsave('fig/EFig8/lollipop-genes.pdf', p3, width = 8, height = 8, 
        units = 'cm', useDingbats = FALSE)
 
 ###############################################################################-
@@ -453,7 +453,7 @@ p4 = dat0 %>%
     legend.title = element_text(size = 5),
   )
 p4
-ggsave('fig/final/EFig4/lollipop-GO.pdf', p4, width = 18, height = 8, 
+ggsave('fig/EFig8/lollipop-GO.pdf', p4, width = 18, height = 8, 
        units = 'cm', useDingbats = FALSE)
 
 ###############################################################################-
@@ -464,7 +464,7 @@ ggsave('fig/final/EFig4/lollipop-GO.pdf', p4, width = 18, height = 8,
 # meta = readRDS('data/real_data/meta/Calcagno2022.rds') %>% mutate(barcode = gsub('-','_',barcode))
 # aucs = readRDS('data/real_data/vespucci/Calcagno2022-seed=42-nsub=10.rds')[[1]]$aucs 
 # meta %<>% left_join(aucs)
-sc = readRDS('/work/upcourtine/vespucci/real_data/seurat/Calcagno2022.rds')
+sc = readRDS('data/real_data/seurat/Calcagno2022.rds')
 meta = sc@meta.data %>%
   mutate(
     barcode = gsub('-', '_', barcode),
@@ -473,7 +473,7 @@ meta = sc@meta.data %>%
 expr = GetAssayData(sc, slot = 'counts')
 colnames(expr) = gsub('-', '_', colnames(expr))
 expr %<>% NormalizeData()
-aucs = readRDS('/work/upcourtine/vespucci/real_data/vespucci/Calcagno2022-seed=42-nsub=10.rds')[[1]]$spatial_auc_result$aucs 
+aucs = readRDS('data/real_data/vespucci/Calcagno2022-seed=42-nsub=10.rds')[[1]]$spatial_auc_result$aucs 
 meta %<>% left_join(aucs)
 # p1_3
 
@@ -579,15 +579,14 @@ for (gene in c('Spp1', 'Sfrp2')) {
 	plot_list[[length(plot_list)+1]] = p5_2
 }
 p5 = wrap_plots(plot_list, nrow=1)
-ggsave('fig/final/EFig4/unregister-aucs.pdf', p5, width=13.5, height=6, units='cm')
+ggsave('fig/EFig8/unregister-aucs.pdf', p5, width=13.5, height=6, units='cm')
 
 meta = readRDS('data/real_data/meta/Calcagno2022.rds') %>% 
     mutate(
         replicate_clean = paste0(ifelse(label == 'd1', 'Day 3 ', 'Day 7 '), str_to_title(gsub('.*_', '', replicate)))
     )
 replicates = unique(meta$replicate_clean)
-# ves_files = list.files('data/rejected_review/vespucci/', pattern='remove', full.names=T)
-ves_files = list.files('/work/upcourtine/vespucci/rejected_review/vespucci/', pattern='remove', full.names=T)
+ves_files = list.files('data/real_data/vespucci_leave_one_out/', pattern='remove', full.names=T)
 
 plot_list = list()
 for (ves_file in ves_files) {
@@ -652,7 +651,7 @@ for (ves_file in ves_files) {
 }
 p6 = wrap_plots(plot_list, nrow=2)
 p6
-ggsave('fig/final/EFig4/leave-rep-out-aucs.pdf', p6, width=5, height=7, units='cm')
+ggsave('fig/EFig8/leave-rep-out-aucs.pdf', p6, width=5, height=7, units='cm')
 
 pairs = tidyr::crossing(
     ves_file1 = ves_files,
@@ -693,4 +692,4 @@ p_out = cor_df %>%
           legend.justification = 'right')
 p_out
 
-ggsave('fig/final/EFig4/leave-one-out-cor.pdf', p_out, width=4, height=4, units='cm')
+ggsave('fig/EFig8/leave-one-out-cor.pdf', p_out, width=4, height=4, units='cm')

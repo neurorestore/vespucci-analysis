@@ -11,10 +11,11 @@ library(lawstat)
 library(nparcomp)
 source('R/theme.R')
 
-sc = readRDS('data/simulations/objects/input=false-de_prob=0.5-de_size=2-reps=3-rep_de_jitter=1-rep_depth_jitter=0.3-seed=0.rds')
+sc = readRDS('data/simulations/objects/input=false-de_prob=0.5-de_size=2-reps=3-rep_de_jitter=1-rep_depth_jitter=0.3-sp_genes=f-seed=0.rds')
 meta = sc@meta.data 
 gene_features = sc@assays$originalexp@meta.features
 
+# label_pal = c('#363062', '#435585', '#818FB4', '#F5E8C7')[c(2, 4)]
 label_pal = c('#FFF5C2', '#F4F27E', '#6DB9EF', '#3081D0')[c(4, 2)]
 p1 = meta %>% 
     ggplot(aes(x = y, y = x, fill = label)) +
@@ -56,6 +57,7 @@ p2 = meta %>%
                       breaks =c(1, 100),
                       name = 'Perturbation   ', 
                       labels = c('min', 'max')) +
+    # guides(fill = guide_legend(override.aes = list(size = 1.0))) +
     coord_fixed() +
     guides(fill = guide_colorbar(frame.colour = 'black', ticks = FALSE,
                                  title.position = "left"),
@@ -107,7 +109,7 @@ p3 = meta %>%
           plot.title = element_text(size = 5))
 
 p0 = wrap_plots(p1, p2, p3, nrow=1)
-ggsave("fig/EFig3/false-simulation-ground-truth.pdf", p0, width = 10, height = 4, units = "cm", useDingbats = FALSE)
+ggsave("fig/final/EFig3/false-simulation-ground-truth.pdf", p0, width = 10, height = 4, units = "cm", useDingbats = FALSE)
 
 plot_df = map_df(unique(meta$replicate), function(x){
     message(x)
@@ -153,18 +155,48 @@ p2 = plot_df %>%
         plot.title = element_text(size=5)
     )
 
-ggsave('fig/EFig3/false-simulations-effect.pdf', p2, width=8, height=6, units='cm')
+ggsave('fig/final/EFig3/false-simulations-effect.pdf', p2, width=8, height=6, units='cm')
 
 
 source('R/theme.R')
-ves_res = readRDS('data/simulations/vespucci/input=false-de_prob=0.5-de_size=2-reps=3-rep_de_jitter=1-rep_depth_jitter=0.3-seed=0.rds')
-ves_de_res =  ves_res$de_feature_result
-other_de_stats = readRDS('data/simulations/summaries/de-results.rds') %>%
+ves_res = readRDS('data/simulations/summaries/de_results/vespucci_de_auroc_false_summary.rds') %>%
+    type_convert() %>%
+    dplyr::select(-input_file, -lo) %>%
+    dplyr::rename(iter = ves_seed) %>%
     filter(
-        input == 'false'
+        # input %in% c('circle_overlap' ,'stripes', 'flag'),
+        iter == 42,
+        de_model == 'nebula_nbgmm',
+        # de_prob == 0.5,
+        max_cells == 100
+    ) %>%
+    dplyr::select(input, seed, de_method, fp)
+splatter_de_stats = readRDS('data/simulations/summaries/de_results/splatter_de_false_results.rds') %>%
+    dplyr::select(-ori_filename) %>%
+    mutate(
+        de_method = 'DE only',
+        iter = 0,
+        prop = -1,
+        nsub = -1
     )
+other_de_stats = readRDS('data/simulations/summaries/de_results/other_methods_false_stats.rds') %>%
+    dplyr::select(-cell_type) %>% # no cell type effect for now
+    mutate(
+        iter = 0,
+        prop = -1,
+        nsub = -1
+    ) %>%
+    filter(
+        de_method != 'smash', # not sure what to do with this for now,
+        p_value_treatment == 'filtered'
+    ) %>%
+    dplyr::select(-ngenes, -ori_gene_size, -p_value_treatment)
+
 other_de_stats %>% dplyr::select(input, de_method) %>% table()
-other_de_stats = other_de_stats[colnames(ves_de_res)]
+
+splatter_de_stats = splatter_de_stats[colnames(ves_res)]
+other_de_stats = other_de_stats[colnames(ves_res)]
+other_de_stats = other_de_stats[colnames(ves_res)]
 color_set = data.frame(
     de_method = c(
         'DE only',
@@ -175,6 +207,7 @@ color_set = data.frame(
         'wilcox',
         'nnsvg',
         'spatialDE',
+        'spatialDE2',
         'heartsvg',
         'squidpy_permutation',
         'squidpy_normality',
@@ -183,6 +216,15 @@ color_set = data.frame(
         'mast',
         'binSpect_kmeans',
         'binSpect_rank',
+        'haystack',
+        'dCor',
+        'hsic',
+        'meringue',
+        'rv',
+        'somde',
+        'spagft',
+        'spanve',
+        'magellan',
         'vespucci'
     ),
     color = c(
@@ -193,9 +235,19 @@ color_set = data.frame(
         rep('Seurat',2),
         'nnSVG',
         'SpatialDE',
+        'SpatialDE2',
         'HEARTSVG',
         rep('SquidPy',3),
         rep('Giotto', 4),
+        'SingleCellHayStack',
+        'dCor',
+        'Hsic',
+        'MERINGUE',
+        'RV',
+        'SomDE',
+        'Spagft',
+        'Spanve',
+        'Magellan',
         'Vespucci'
     ),
     x_name = c(
@@ -207,6 +259,7 @@ color_set = data.frame(
         'Wilcoxon rank-sum test',
         'nnSVG',
         'SpatialDE',
+        'SpatialDE2',
         'HEARTSVG',
         'Squidpy (permutation test)',
         'Squidpy (normality ass.)',
@@ -215,26 +268,37 @@ color_set = data.frame(
         'MAST',
         'binSpect (k-means)',
         'binSpect (rank)',
+        'SingleCellHayStack',
+        'dCor',
+        'Hsic',
+        'MERINGUE',
+        'RV',
+        'SomDE',
+        'Spagft',
+        'Spanve',
+        'Magellan',
         'Vespucci'
     )
 )
 dat0 = rbind(
-    ves_de_res,
+    # splatter_de_stats,
+    ves_res,
     other_de_stats
-) %>% dplyr::rename(val = fp)
+) %>% dplyr::rename(val = fp) %>%
+    mutate(input = 'false') %>% filter(!de_method %in% c('somde', 'hsic'))
 
 dat0 %>% dplyr::select(seed, de_method) %>% table()
 dat0 %<>%
     left_join(color_set, by='de_method')
 
 # set color palette
-pal = nr_base_11_light[1:10]
-names(pal) = unique(dat0$color[!dat0$color %in% c('Vespucci')])
+pal = pals::kelly(17)
+names(pal) = unique(dat0$color[!dat0$color %in% c('Magellan', 'Vespucci')])
 pal['Vespucci'] = nr_base_5[1]
 alpha_pal = c('max'=1, 'min'=0.3)
 
 # add OOT methods
-oot_df = data.frame(x_name = c('SPARK', 'SPADE', 'trendsceek', 'GPCounts'),
+oot_df = data.frame(x_name = c('SPARK', 'SPADE', 'trendsceek', 'GPCounts', 'BOOST-GP', 'BOOSTMI', 'scGCO', 'HSIC'),
                     input = dat0$input %>% first) %>% 
     mutate(color = x_name) %>% 
     filter(!x_name %in% dat0$x_name)
@@ -261,6 +325,9 @@ labs = dat0 %>%
         text_y = ifelse(val < 0, 0, val)
     ) %>% 
     tidyr::replace_na(list(text_val = 'OOT', text_y = 0))
+
+# dat0$color %<>% factor(levels = names(pal))
+# dat0$alpha = ifelse(dat0$color %in% c('Magellan', 'Vespucci'), 'max', 'min')
 
 x_name_levels = labs %>% arrange(-stats_val) %>% pull(x_name)
 dat0$x_name = factor(dat0$x_name, levels = x_name_levels)
@@ -289,7 +356,7 @@ p5 = dat0 %>%
           legend.key.height = unit(0.15, 'lines')
     )
 p5
-ggsave(paste0("fig/EFig3/false-discoveries-boxplot.pdf"), p5,
+ggsave(paste0("fig/final/EFig3/false-discoveries-boxplot.pdf"), p5,
        width = 8, height = 6.3, units = "cm", useDingbats = FALSE)
 
 #############################################################################-
@@ -405,5 +472,5 @@ p6 = delta0 %>%
           legend.position = 'right',
           legend.justification = 'bottom')
 p6
-ggsave(paste0("fig/EFig3/false-discoveries-delta.pdf"), p6,
-       width = 9, height = 6.6, units = "cm", useDingbats = FALSE)
+ggsave(paste0("fig/final/EFig3/false-discoveries-delta.pdf"), p6,
+       width = 9, height = 7, units = "cm", useDingbats = FALSE)

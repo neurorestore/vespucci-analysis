@@ -22,7 +22,7 @@ from scGCO import *
 # from somde import SomNode
 
 # set working directory
-git_dir = os.path.expanduser("~/git/vespucci")
+git_dir = os.path.expanduser("~/git/vespucci-analysis/")
 python_dir = git_dir + "/python"
 os.chdir(python_dir)
 sys.path.append(python_dir)

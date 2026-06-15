@@ -8,15 +8,13 @@ library(pROC)
 library(PRROC)
 
 # setwd('C:/Users/teo/Documents/EPFL/projects/vespucci/')
-setwd('~/git/vespucci/')
+setwd('~/git/vespucci-analysis/')
 source('R/theme.R')
 
 # test registration
-# meta_dir = 'data/rejected_review/test_registration/simulations/meta/'
-meta_dir = '/work/upcourtine/vespucci/rejected_review/test_registration/simulations/meta/'
+meta_dir = 'data/simulations/registration/meta/'
 meta_files = list.files(meta_dir, full.names=T)
-# ves_dir = 'data/rejected_review/test_registration/simulations/vespucci/'
-ves_dir = '/work/upcourtine/vespucci/rejected_review/test_registration/simulations/vespucci/'
+ves_dir = 'data/simulations/registration/vespucci/'
 
 grid_to_plot = data.frame(
     meta_file = meta_files
@@ -131,9 +129,9 @@ for (i in 1:nrow(grid_to_plot)) {
     plot_list[[length(plot_list)+1]] = plot_grid(p4_1, p4_2, nrow=2, align='v')
 }
 out_p = wrap_plots(plot_list, nrow=2)
-ggsave('fig/final/EFig11/different_registration_setup.pdf', out_p, width=12, height=11, units='cm')
+ggsave('fig/EFig15/different_registration_setup.pdf', out_p, width=12, height=11, units='cm')
 
-ves_de_res = readRDS('data/rejected_review/test_registration/simulations/vespucci_de_auroc_summary.rds') %>%
+ves_de_res = readRDS('data/simulations/registration/vespucci_de_auroc_summary.rds') %>%
     mutate(
         shift_dist = gsub('both', '', shift),
         shift_dist = gsub('right', '', shift_dist),
@@ -192,11 +190,11 @@ p5 = ves_de_res %>%
         legend.key.height = unit(0.15, 'lines')
     )
 p5
-ggsave('fig/final/EFig11/simdifferent_registration_auc.pdf', p5, width=4, height=6, units='cm')
+ggsave('fig/EFig15/simdifferent_registration_auc.pdf', p5, width=4, height=6, units='cm')
 
-meta_dir = 'data/rejected_review/test_registration/real_data/meta/'
+meta_dir = 'data/real_data/registration/meta/'
 meta_files = list.files(meta_dir, full.names=T, pattern='Calcagno2022')
-ves_dir = 'data/rejected_review/test_registration/real_data/vespucci/'
+ves_dir = 'data/real_data/registration/vespucci/'
 grid_to_plot = data.frame(
   meta_file = meta_files
 ) %>%
@@ -325,11 +323,11 @@ for (shift in shifts){
 }
 
 final_p = wrap_plots(plot_list, nrow=3)
-ggsave(paste0('fig/final/EFig11/Calcagno2022-registered-aucs.pdf'), final_p, height=8, width=14, units='cm')
+ggsave(paste0('fig/EFig15/Calcagno2022-registered-aucs.pdf'), final_p, height=8, width=14, units='cm')
 
-meta_dir = 'data/rejected_review/test_registration/real_data/meta/'
+meta_dir = 'data/real_data/registration/meta/'
 meta_files = list.files(meta_dir, full.names=T, pattern='regen_final')
-ves_dir = 'data/rejected_review/test_registration/real_data/vespucci/'
+ves_dir = 'data/real_data/registration/vespucci/'
 grid_to_plot = data.frame(
   meta_file = meta_files
 ) %>%
@@ -484,4 +482,4 @@ for (shift in shifts){
 }
 
 final_p = wrap_plots(plot_list, ncol=1)
-ggsave(paste0('fig/final/EFig11/regen_final-registered-aucs.pdf'), final_p, height=12, width=10, units='cm')
+ggsave(paste0('fig/EFig15/regen_final-registered-aucs.pdf'), final_p, height=12, width=10, units='cm')

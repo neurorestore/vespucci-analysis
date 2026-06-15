@@ -3,7 +3,7 @@ library(magrittr)
 library(Matrix)
 library(Seurat)
 
-setwd('~/git/vespucci')
+setwd('~/git/vespucci-analysis/')
 source('R/functions/registration_functions.R')
 
 mapping_metadata = read.csv('metadata/Maniatis_GSE120374_raw_to_reg_metadata.csv', row.names=1)

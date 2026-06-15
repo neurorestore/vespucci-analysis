@@ -1,4 +1,4 @@
-setwd('~/git/vespucci')
+setwd('~/git/vespucci-analysis/')
 library(tidyverse)
 library(magrittr)
 library(Seurat)

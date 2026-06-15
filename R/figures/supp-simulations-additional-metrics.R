@@ -1,12 +1,11 @@
 library(tidyverse)
 library(magrittr)
 library(ggplot2)
-setwd('~/git/vespucci')
+setwd('~/git/vespucci-analysis/')
 source('R/theme.R')
 
 # read AUPR results #### 
-# ves_res = readRDS('data/simulations/summaries/de_results/all_vespucci_de_auroc_summary.rds') %>%
-ves_res = readRDS('/work/upcourtine/vespucci/simulations/summaries/de_results/all_vespucci_de_auroc_summary.rds') %>%
+ves_res = readRDS('data/simulations/summaries/de_results/all_vespucci_de_auroc_summary.rds') %>%
     type_convert() %>%
     dplyr::select(-input_file, -lo) %>%
     dplyr::rename(iter = ves_seed) %>%
@@ -21,7 +20,7 @@ ves_res = readRDS('/work/upcourtine/vespucci/simulations/summaries/de_results/al
 		(de_prob == 0.2 & input %in% c('circle'))
     ) %>%
     dplyr::select(input, seed, de_method, auprc_integral, acc, sensitivity, specificity)
-other_de_stats = readRDS('data/simulations/summaries/de_results/other_methods_stats_new.rds') %>%
+other_de_stats = readRDS('data/simulations/summaries/de_results/other_methods_stats.rds') %>%
     dplyr::select(-cell_type) %>% # no cell type effect for now
     mutate(
         iter = 0,
@@ -212,4 +211,4 @@ for (i in 1:nrow(grid_to_run)) {
 }
 
 out_p = wrap_plots(plot_list, ncol=3, byrow=F)
-ggsave(paste0("fig/final/EFig17/additional-metrics-boxplot.pdf"), out_p, width = 19, height = 22, units = "cm", useDingbats = FALSE)
+ggsave(paste0("fig/EFig3/additional-metrics-boxplot.pdf"), out_p, width = 19, height = 22, units = "cm", useDingbats = FALSE)

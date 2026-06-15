@@ -1,4 +1,4 @@
-setwd('~/git/vespucci')
+setwd('~/git/vespucci-analysis/')
 library(tidyverse)
 library(magrittr)
 library(Seurat)
@@ -80,12 +80,12 @@ time = rbind(
 )
 
 # read AUPR results #### 
-ves_res = readRDS('data/simulations/summaries/de_results/all_vespucci_de_auroc_summary_new.rds') %>%
+ves_res = readRDS('data/simulations/summaries/de_results/all_vespucci_de_auroc_summary.rds') %>%
     type_convert() %>%
     filter(max_cells == 100, ves_seed == 42, input %in% c('circle', 'flag', 'circle_overlap', 'stripes'), sp_genes==F) %>% 
     mutate(de_method = 'vespucci') %>%
     dplyr::select(input, seed, de_method, auprc_integral)
-other_de_stats = readRDS('data/simulations/summaries/de_results/other_methods_stats_new.rds') %>%
+other_de_stats = readRDS('data/simulations/summaries/de_results/other_methods_stats.rds') %>%
   dplyr::select(-cell_type) %>% # no cell type effect for now
   mutate(
     iter = 0,
@@ -644,21 +644,17 @@ for (input in inputs) {
   # row2
   
   # save
-  # ggsave(paste0("fig/final/EFig2/", simulation, "-row1.pdf"), row1,
-  #        width = 7, height = 4.25, units = "cm", useDingbats = FALSE)
-  # ggsave(paste0("fig/final/EFig2/", simulation, "-row2.pdf"), row2,
-  #        width = 8, height = 4.25, units = "cm", useDingbats = FALSE)
-  ggsave(paste0("fig/final/EFig2/", input, "-row1.pdf"), row1,
+  ggsave(paste0("fig/EFig2/", input, "-row1.pdf"), row1,
          width = 12, height = 5, units = "cm", useDingbats = FALSE)
-  ggsave(paste0("fig/final/EFig2/", input, "-row3.pdf"), p5,
+  ggsave(paste0("fig/EFig2/", input, "-row3.pdf"), p5,
          width = 8, height = 6.3, units = "cm", useDingbats = FALSE)
-  ggsave(paste0("fig/final/EFig2/", input, "-row4.pdf"), p6,
+  ggsave(paste0("fig/EFig2/", input, "-row4.pdf"), p6,
          width = 9, height = 6.6, units = "cm", useDingbats = FALSE)
 }
 
 # plot time-mem of methods
 # time_mem_sum = readRDS('data/simulations/timeit/time-mem-summary.rds')
-time_mem_sum = readRDS('/work/upcourtine/vespucci/simulations/timeit/time-mem-summary.rds')
+time_mem_sum = readRDS('data/simulations/timeit/time-mem-summary.rds')
 time_mem_sum %<>% left_join(color_set, by = c('de'='de_method')) %>% mutate(x_name = ifelse(de == 'squidpy', 'SquidPy', x_name))
 
 plot_list = list()

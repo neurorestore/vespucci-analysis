@@ -1,4 +1,4 @@
-setwd('C:/Users/teo/Documents/EPFL/projects/vespucci/')
+setwd('~/git/vespucci-analysis/')
 library(tidyverse)
 library(magrittr)
 library(Seurat)
@@ -104,7 +104,7 @@ for (idx in seq_along(genes_to_plot)) {
     all_plots[[length(all_plots)+1]] = p
 }
 p1 = wrap_plots(expr_plots, nrow = 2)
-# ggsave('fig/final/EFig8/genes.pdf', p1, width = 10, height = 5,
+# ggsave('fig/EFig7/genes.pdf', p1, width = 10, height = 5,
 #        units = 'cm', useDingbats = FALSE)
 
 
@@ -206,11 +206,11 @@ for (idx in seq_len(nrow(mat))) {
 }
 
 p2 = wrap_plots(go_plots, nrow=1)
-# ggsave('fig/final/EFig8/GO-modules.pdf', p2, width = 10, height = 3,
+# ggsave('fig/EFig7/GO-modules.pdf', p2, width = 10, height = 3,
 #        units = 'cm', useDingbats = FALSE)
 
 p3 = wrap_plots(all_plots, nrow=3)
-ggsave('fig/final/EFig8/genes-GO-modules.pdf', p3, width = 10, height = 6,
+ggsave('fig/EFig7/genes-GO-modules.pdf', p3, width = 10, height = 6,
        units = 'cm', useDingbats = FALSE)
 
 
@@ -260,7 +260,7 @@ p4 = dat0 %>%
         legend.title = element_text(size = 5),
     )
 p4
-ggsave('fig/final/EFig8/lollipop-genes.pdf', p4, width = 8, height = 8, 
+ggsave('fig/EFig7/lollipop-genes.pdf', p4, width = 8, height = 8, 
        units = 'cm', useDingbats = FALSE)
 
 ###############################################################################-
@@ -318,7 +318,7 @@ p5 = dat0 %>%
         legend.title = element_text(size = 5),
     )
 p5
-ggsave('fig/final/EFig8/lollipop-GO.pdf', p4, width = 18, height = 8, 
+ggsave('fig/EFig7/lollipop-GO.pdf', p4, width = 18, height = 8, 
        units = 'cm', useDingbats = FALSE)
 
 ves_res = readRDS('data/real_data/DE_summaries/vespucci/Koupourtidou2024-seed=42-nsub=10-de=nebula_nbgmm.rds')
@@ -415,7 +415,7 @@ for (type in types) {
     }
     
     p2 = wrap_plots(plot_list, nrow=3)
-    ggsave(paste0('fig/final/EFig8/', type, '-top-genes.pdf'), p2, width=14.5, height=9.5, units = 'cm')
+    ggsave(paste0('fig/EFig7/', type, '-top-genes.pdf'), p2, width=14.5, height=9.5, units = 'cm')
 }
 
 # pal = pals::kovesi.diverging_bwr_55_98_c37(100)
@@ -458,4 +458,4 @@ p3 = ranking_df %>%
         # legend.title = element_blank()
     )
 p3
-ggsave('fig/final/EFig8/sparkx-vespucci-ranking.pdf', p3, width=4, height=5, units='cm')
+ggsave('fig/EFig7/sparkx-vespucci-ranking.pdf', p3, width=4, height=5, units='cm')

@@ -1,3 +1,4 @@
+# setwd('C:/Users/teo/Documents/EPFL/projects/vespucci/')
 setwd('~/git/vespucci-analysis/')
 library(tidyverse)
 library(magrittr)
@@ -13,7 +14,7 @@ library(gridExtra)
 source('R/theme.R')
 
 # Supp Fig 4a - registration
-sc = readRDS('data/published_data/seurat/Zeng2023.rds')
+sc = readRDS('data/real_data/seurat/Zeng2023.rds')
 rename_cell_types = c(
     'CA1' = 'CA1 excitatory neuron',
     'CA2' = 'CA2 excitatory neuron',
@@ -108,15 +109,24 @@ p2 = meta %>%
 # p2
 p0 = wrap_plots(p1, p2, nrow=1)
 # p0
-ggsave('fig/EFig8/registration.pdf', p0, width=9, height = 6, units='cm')
+ggsave('fig/EFig11/registration.pdf', p0, width=9, height = 6, units='cm')
 
 # Supp Fig 4b - genes
+sc = readRDS('data/real_data/seurat/Zeng2023.rds')
+meta = sc@meta.data
 
-ves_res = readRDS('data/published_data/vespucci/Zeng2023-seed=42-nsub=10.rds')
-spatial_auc_res = ves_res$spatial_auc_result$aucs
+ves_res0 = readRDS('data/real_data/vespucci/Zeng2023-seed=42-nsub=10.rds')
+ves_de_res0 = readRDS('data/real_data/DE_summaries/vespucci/Zeng2023-seed=42-nsub=10-de=nebula_nbgmm.rds')
 
+comparison = unique(ves_de_res0$comparison)
+ves_res = ves_res0[[comparison]]$aucs
+ves_de_res = ves_de_res0 %>%
+    filter(comparison == !!comparison) %>%
+    arrange(comparison, p_val, -abs(logFC))
+
+# Fig Supp Fig 5b - AUC
 dat0 = meta %>%
-    left_join(spatial_auc_res) %>%
+    left_join(ves_res) %>%
     filter(!is.na(auc))
 
 fit = loess(auc ~ x * y, data = dat0, span = 0.02, degree = 1)
@@ -165,15 +175,24 @@ fig7b = dat0 %>%
           legend.key.height = unit(0.18, 'lines'),
           plot.title = element_text(size = 5))
 fig7b
-ggsave('fig/EFig8/AUC.pdf', fig7b, width=6, height=6, units='cm')
+ggsave('fig/EFig11/AUC.pdf', fig7b, width=6, height=6, units='cm')
 
+sc = readRDS('data/real_data/seurat/Zeng2023.rds')
 meta = sc@meta.data %>%
     mutate(
         label = ifelse(grepl('control', label), 'Control', 'AD'),
         label = factor(label, levels=c('Control', 'AD'))
     )
+normalize_data = F
 expr = GetAssayData(sc, slot='counts')
 colnames(expr) = gsub('-', '_', colnames(expr))
+
+if (normalize_data) {
+    expr %<>% NormalizeData()
+    norm_suffix = '-norm'
+} else {
+    norm_suffix = '-raw'    
+}
 
 dat0 = meta %>% dplyr::select(barcode, x, y, label)
 genes_to_plot = c(
@@ -186,6 +205,8 @@ genes_to_plot = c(
     'HPCA',
     'NSF'
 )
+
+sum(!str_to_title(genes_to_plot) %in% rownames(expr))
 
 conditions = unique(dat0$label)
 for (i in 1:length(genes_to_plot)) {
@@ -255,28 +276,33 @@ for (i in 1:length(genes_to_plot)) {
     expr_plots[[length(expr_plots)+1]] = expr_plot
 }
 fig7c = wrap_plots(expr_plots, nrow=4)
-ggsave('fig/EFig8/genes.pdf', fig7c, width=10, height=11, units='cm')
+ggsave('fig/EFig11/genes.pdf', fig7c, width=10, height=11, units='cm')
 
+# Supp Fig 7d
 source('R/theme.R')
-dat0 = ves_res$de_feature_result
+dat0 = readRDS('data/real_data/DE_summaries/vespucci/Zeng2023-seed=42-nsub=10-de=nebula_nbgmm.rds')
 min_pval = min(dat0$p_val[dat0$p_val > 0])
 dat0$p_val = vapply(dat0$p_val, function(x){max(min_pval, x)}, as.numeric(1))
 dat0 %<>%
-    mutate(up_reg = effect_size > 0) %>%
+    mutate(up_reg = logFC > 0) %>%
     group_by(up_reg) %>%
-    arrange(p_val, -abs(effect_size)) %>%
+    arrange(p_val, -abs(logFC)) %>%
     mutate(
         log_p_val = -log10(p_val)
     ) %>%
     slice(1:15)
 
+# color_pal = colorRampPalette(nr_heat_red_spatial)(30)
+# brks = range(dat0$log_p_val)
+# labels = round(brks, 1)
+
 dat0 %<>% 
-    arrange(-effect_size)
+    arrange(-logFC)
 dat0$gene = factor(dat0$gene, levels=rev(as.character(dat0$gene)))
 
 p3 = dat0 %>%
-    ggplot(aes(x = gene, y = effect_size)) +
-    # facet_wrap(sign(effect_size) ~ ., ncol = 1, scales = 'free') +
+    ggplot(aes(x = gene, y = logFC)) +
+    # facet_wrap(sign(logFC) ~ ., ncol = 1, scales = 'free') +
     geom_hline(aes(yintercept = 0), size = 0.4, color = 'grey88') +
     geom_segment(aes(xend = gene, yend = 0), color = 'grey88') +
     geom_point(shape = 21, stroke = 0.2, size = 0.9, color = 'black', 
@@ -299,7 +325,7 @@ p3 = dat0 %>%
         legend.title = element_text(size = 5),
     )
 p3
-ggsave('fig/EFig8/lollipop-genes.pdf', p3, width = 8, height = 8, 
+ggsave('fig/EFig11/lollipop-genes.pdf', p3, width = 8, height = 8, 
        units = 'cm', useDingbats = FALSE)
 
 meta = sc@meta.data %>%
@@ -344,34 +370,161 @@ delta = pmap_dfr(pairs, function(...) {
 lvls = with(meta, reorder(cell_type_name, auc, stats::median)) %>% levels()
 range = range(delta$delta)
 
-labels = tests %>% 
-    filter(test == 'wilcox') %>% 
-    mutate(celltype1 = factor(celltype1, levels = lvls),
-           celltype2 = factor(celltype2, levels = lvls),
-           lab = ifelse(pval < 0.001/2, '***',
-                        ifelse(pval < 0.01/2, '**',
-                               ifelse(pval < 0.05/2, '*', ''))))
-p1 = delta %>% 
-    mutate(celltype1 = factor(celltype1, levels = lvls),
-           celltype2 = factor(celltype2, levels = lvls)) %>% 
-    ggplot(aes(x = celltype2, y = celltype1)) +
-    geom_tile(color = 'white', aes(fill = delta)) +
-    geom_text(data = labels, size = 1, aes(label = lab)) +
-    scale_x_discrete(expand = c(0, 0)) +
-    scale_y_discrete(expand = c(0, 0)) +
-    scale_fill_paletteer_c("pals::kovesi.diverging_bwr_55_98_c37",
-                           name = expression(Delta~AUC),
-                           breaks = range,
-                           labels = format(range, digits = 2)) +
-    guides(fill = guide_colorbar(ticks = FALSE, frame.colour = 'black', title.position='top')) +
-    coord_fixed() +
-    boxed_theme() +
-    theme(axis.title.x = element_blank(),
-          axis.title.y = element_blank(),
-          axis.text.x = element_text(angle = 45, hjust = 1),
-          legend.key.height = unit(0.18, 'lines'),
-          legend.key.width = unit(0.25, 'lines'),
-          legend.position = 'bottom',
-          legend.justification = 'right')
-ggsave(paste0('fig/EFig8/celltype-auc-delta-wilcox.pdf'), p1, width=6, height=6, units='cm')
+tests_to_plot = c('t', 'wilcox')
+for (curr_test in tests_to_plot) {
+    labels = tests %>% 
+        filter(test == curr_test) %>% 
+        mutate(celltype1 = factor(celltype1, levels = lvls),
+               celltype2 = factor(celltype2, levels = lvls),
+               lab = ifelse(pval < 0.001/2, '***',
+                            ifelse(pval < 0.01/2, '**',
+                                   ifelse(pval < 0.05/2, '*', ''))))
+    p1 = delta %>% 
+        mutate(celltype1 = factor(celltype1, levels = lvls),
+               celltype2 = factor(celltype2, levels = lvls)) %>% 
+        ggplot(aes(x = celltype2, y = celltype1)) +
+        geom_tile(color = 'white', aes(fill = delta)) +
+        geom_text(data = labels, size = 1, aes(label = lab)) +
+        scale_x_discrete(expand = c(0, 0)) +
+        scale_y_discrete(expand = c(0, 0)) +
+        scale_fill_paletteer_c("pals::kovesi.diverging_bwr_55_98_c37",
+                               name = expression(Delta~AUC),
+                               breaks = range,
+                               labels = format(range, digits = 2)) +
+        guides(fill = guide_colorbar(ticks = FALSE, frame.colour = 'black', title.position='top')) +
+        coord_fixed() +
+        boxed_theme() +
+        theme(axis.title.x = element_blank(),
+              axis.title.y = element_blank(),
+              axis.text.x = element_text(angle = 45, hjust = 1),
+              legend.key.height = unit(0.18, 'lines'),
+              legend.key.width = unit(0.25, 'lines'),
+              legend.position = 'bottom',
+              legend.justification = 'right')
+    # fig3a
+    ggsave(paste0('fig/EFig11/celltype-auc-delta-', curr_test, '.pdf'), p1, width=6, height=6, units='cm')
+}
 
+sc = readRDS('data/real_data/seurat/Zeng2023.rds')
+meta = sc@meta.data
+meta %<>% mutate(replicate = factor(replicate))
+
+# original expr
+raw_expr = GetAssayData(sc, slot='counts') 
+norm_expr = raw_expr %>% NormalizeData()
+meta$norm_expr = norm_expr['Prox1',meta$barcode]
+
+# shown in paper
+tmp_df = data.frame()
+meta0 = meta 
+meta0$raw_expr = raw_expr['Prox1', meta0$barcode]
+for (condition in unique(meta0$label)){
+    tmp_expr_df = meta0 %>% filter(label == !!condition)
+    fit = loess(expr ~ x * y, data = tmp_expr_df, span = 0.02, degree = 1)
+    tmp_expr_df$expr_fit = predict(fit, tmp_expr_df)
+    tmp_df %<>% rbind(tmp_expr_df)
+}
+meta %<>% left_join(tmp_df %>% dplyr::select(barcode, expr_fit))
+
+color_pal = nr_heat_red_no_white %>% tail(-5)
+plot_list1 = lapply(levels(meta$replicate), function(rep) {
+    meta %>%
+        filter(replicate == rep) %>% 
+        mutate(expr = winsorize(norm_expr, quantile(norm_expr, 0.01, 0.99))) %>% 
+        ggplot(aes(x = x, y = y, fill = expr)) +
+        rasterise(geom_point(size = 0.2, shape = 21, stroke = 0, alpha = 1), dpi = 600) +
+        scale_color_gradientn(colours = color_pal) +
+        scale_fill_gradientn(colours = color_pal) +
+        guides(fill = guide_colorbar(ticks = FALSE, frame.colour = 'black')) +
+        boxed_theme(size_lg = 4, size_sm = 4) +
+        theme(
+            aspect.ratio = 1,
+            # plot.title = element_text(size=5,margin = margin(0,0,-2,0)),
+            plot.margin = unit(c(0.1, 0.05, 0.05, 0.5), "cm"),
+            axis.title.x = element_blank(),
+            axis.text.x = element_blank(),
+            axis.ticks.x = element_blank(),
+            axis.title.y = element_blank(),
+            axis.text.y = element_blank(),
+            axis.ticks.y = element_blank(),
+            # legend.position = 'none'
+            legend.key.width = unit(0.18, 'lines'),
+            legend.key.height = unit(0.18, 'lines'),
+            # legend.text = element_text(size = 5),
+            # legend.title = element_text(size = 5),
+            legend.position = 'none',
+            legend.justification = 'bottom'
+        ) +
+        ggtitle(rep)
+})
+p1 = wrap_plots(plot_list1, nrow=1) + plot_layout(ncol = 4) & theme(plot.margin = margin(1,1,1,1))
+
+range = range(meta$expr_fit)
+brks = c(range[1] + 0.1 * diff(range), range[2] - 0.1 * diff(range))
+
+p2 = meta %>%
+    mutate(expr_fit = winsorize(expr_fit, range)) %>%
+    arrange(-expr_fit) %>%
+    ggplot(aes(x = x, y = y, fill = expr_fit)) +
+    rasterise(geom_point(size = 0.2, shape = 21, stroke = 0, alpha = 1), dpi = 600) +
+    scale_color_gradientn(colours = color_pal, name = 'Expression', breaks = brks,  labels=labels) +
+    scale_fill_gradientn(colours = color_pal, name = 'Expression', breaks = brks,  labels=labels) +
+    guides(fill = guide_colorbar(ticks = FALSE, frame.colour = 'black')) +
+    boxed_theme(size_lg = 5, size_sm = 5) +
+    scale_y_continuous(expand = c(0,0)) +
+    scale_x_continuous(expand = c(0,0)) +
+    # ggtitle(toupper(gene)) +
+    theme(
+        aspect.ratio = 1,
+        # plot.title = element_text(size=5,margin = margin(0,0,-2,0)),
+        plot.margin = unit(c(0.1, 0.05, 0.05, 0.5), "cm"),
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        # legend.position = 'none'
+        legend.key.width = unit(0.18, 'lines'),
+        legend.key.height = unit(0.18, 'lines'),
+        legend.text = element_text(size = 5),
+        legend.title = element_text(size = 5),
+        legend.position = 'none',
+        legend.justification = 'bottom'
+    ) +
+    facet_wrap(~replicate,nrow=1)
+
+range = range(meta$nCount_RNA)
+brks = c(range[1] + 0.1 * diff(range), range[2] - 0.1 * diff(range))
+p3 = meta %>%
+    ggplot(aes(x = x, y = y, fill = nCount_RNA)) +
+    rasterise(geom_point(size = 0.2, shape = 21, stroke = 0, alpha = 1), dpi = 600) +
+    scale_color_gradientn(colours = color_pal, name = 'Expression', breaks = brks,  labels=labels) +
+    scale_fill_gradientn(colours = color_pal, name = 'Expression', breaks = brks,  labels=labels) +
+    guides(fill = guide_colorbar(ticks = FALSE, frame.colour = 'black')) +
+    boxed_theme(size_lg = 5, size_sm = 5) +
+    scale_y_continuous(expand = c(0,0)) +
+    scale_x_continuous(expand = c(0,0)) +
+    # ggtitle(toupper(gene)) +
+    theme(
+        aspect.ratio = 1,
+        # plot.title = element_text(size=5,margin = margin(0,0,-2,0)),
+        plot.margin = unit(c(0.1, 0.05, 0.05, 0.5), "cm"),
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        # legend.position = 'none'
+        legend.key.width = unit(0.18, 'lines'),
+        legend.key.height = unit(0.18, 'lines'),
+        legend.text = element_text(size = 5),
+        legend.title = element_text(size = 5),
+        legend.position = 'none',
+        legend.justification = 'bottom'
+    ) +
+    facet_wrap(~replicate,nrow=1)
+
+out_p = wrap_plots(p1,p2,p3,nrow=3)
+ggsave('fig/EFig11/Zeng_Prox1_plots.pdf', out_p, width=8, height=9, units='cm')
